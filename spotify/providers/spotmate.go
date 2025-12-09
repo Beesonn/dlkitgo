@@ -25,7 +25,7 @@ func (p *SpotMate) BaseURL() string {
 
 func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 	if spotifyURL == "" {
-		return "", errors.New("spotmate: empty url")
+		return "", errors.New("cannot be empty")
 	}
 
 	if p.Client == nil {

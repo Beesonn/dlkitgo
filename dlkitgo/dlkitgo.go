@@ -5,11 +5,13 @@ import (
     "time"
 
     "github.com/Beesonn/dlkitgo/spotify"
+    "github.com/Beesonn/dlkitgo/instagram"
 )
 
 type Dlkit struct {
     client  *http.Client
     Spotify *spotify.SpotifyService
+    Instagram *instagram.InstaService
 }
 
 func NewClient() *Dlkit {
@@ -18,6 +20,7 @@ func NewClient() *Dlkit {
     }
 
     c.Spotify = spotify.NewSpotify(c.client)
+    c.Instagram = instagram.NewInsta(c.client)
 
     return c
 }

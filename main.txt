@@ -1,0 +1,57 @@
+// main.go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"strings"
+
+	"github.com/Beesonn/dlkitgo/dlkitgo"
+)
+
+func main() {
+	client := dlkitgo.NewClient()
+
+	url := "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" // Today's Top Hits
+	// url := "https://open.spotify.com/track/7MXVkk9YMctZqd1Srtv4MB"
+	// url := "https://open.spotify.com/album/4yP0hdKOZPNshxUOjY0cZj"
+   r, _ := client.Spotify.Search("thallumaala")
+   fmt.Println(r)
+	result, err := client.Spotify.Stream(url)
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
+
+	// Pretty JSON
+	jsonData, _ := json.MarshalIndent(result, "", "  ")
+	fmt.Println(string(jsonData))
+	fmt.Println("\n" + strings.Repeat("=", 70))
+
+	// Summary
+	if len(result.Source) > 0 {
+		first := result.Source[0]
+		switch result.Type {
+		case "track":
+			fmt.Printf("Track    : %s - %s\n", first.Artist, first.Title)
+		case "album":
+			fmt.Printf("Album    : %s (%d tracks)\n", first.Title, len(result.Source))
+		case "playlist":
+			fmt.Printf("Playlist : %s (%d tracks)\n", first.Title, len(result.Source))
+		}
+		fmt.Printf("Cover    : %s\n", first.Image)
+		fmt.Printf("Link     : %s\n", result.URL)
+	}
+
+	fmt.Println("\nTracks with streams:")
+	for i, t := range result.Source {
+		status := "Success"
+		if t.URL == "" {
+			status = "Failed"
+		}
+		fmt.Printf("  [%2d] %s - %s -> %s\n", i+1, t.Artist, t.Title, status)
+		if t.URL != "" {
+			fmt.Printf("        Play -> %s\n", t.URL)
+		}
+	}
+}

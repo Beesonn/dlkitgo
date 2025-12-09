@@ -102,17 +102,17 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 	}
 
 	// Also check for __NEXT_DATA__ on main page as fallback
-	doc.Find("script#__NEXT_DATA__").Each(func(i int, s *goquery.Selection) {
-		ParseNextData(s.Text(), &data)
+	doc.Find("script#__NEXT_DATA__").Each(func(i int, sel *goquery.Selection) {
+		s.ParseNextData(sel.Text(), &data)
 	})
 
-	doc.Find("script[type='application/ld+json']").Each(func(i int, s *goquery.Selection) {
+	doc.Find("script[type='application/ld+json']").Each(func(i int, sel *goquery.Selection) {
 		var ldjsons []json.RawMessage
-		if err := json.Unmarshal([]byte(s.Text()), &ldjsons); err != nil {
+		if err := json.Unmarshal([]byte(sel.Text()), &ldjsons); err != nil {
 			// If not array, try as single object
 			var singleLd LdJson
-			if json.Unmarshal([]byte(s.Text()), &singleLd) == nil {
-				ProcessLdJson(&singleLd, &data)
+			if json.Unmarshal([]byte(sel.Text()), &singleLd) == nil {
+				s.ProcessLdJson(&singleLd, &data)
 			}
 			return
 		}
@@ -120,27 +120,27 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 		for _, raw := range ldjsons {
 			var ld LdJson
 			if err := json.Unmarshal(raw, &ld); err == nil {
-				ProcessLdJson(&ld, &data)
+				s.ProcessLdJson(&ld, &data)
 			}
 		}
 	})
 
 	// Fallback for playlists/albums, and now also tracks if LD incomplete
 	if (data.Type == "playlist" || data.Type == "album" || data.Type == "track") && len(data.Tracks) == 0 && data.Name == "" {
-		FetchEmbedData(&data, s.Client)
+		s.FetchEmbedData(&data, s.Client)
 	}
 
 	return data, nil
 }
 
-func ProcessLdJson(ld *LdJson, data *SpotifyData) {
+func (s *SpotifyService) ProcessLdJson(ld *LdJson, data *SpotifyData) {
 	if ld.Type == "MusicRecording" {
 		data.Name = ld.Name
 		if len(ld.Image) > 0 {
 			data.Image = ld.Image[0]
 		}
 		data.PreviewURL = ld.Audio.ContentURL
-		data.Artist = ParseArtistRaw(ld.ByArtist)
+		data.Artist = s.ParseArtistRaw(ld.ByArtist)
 
 		// For track, add as single track
 		if data.Type == "track" {
@@ -158,7 +158,7 @@ func ProcessLdJson(ld *LdJson, data *SpotifyData) {
 					if elem.Item.Name != "" {
 						data.Tracks = append(data.Tracks, TrackInfo{
 							Name:       elem.Item.Name,
-							Artist:     ParseArtistRaw(elem.Item.ByArtist),
+							Artist:     s.ParseArtistRaw(elem.Item.ByArtist),
 							PreviewURL: elem.Item.Audio.ContentURL,
 							URL:        elem.Item.URL,
 						})
@@ -169,7 +169,7 @@ func ProcessLdJson(ld *LdJson, data *SpotifyData) {
 	}
 }
 
-func FetchEmbedData(data *SpotifyData, client *http.Client) {
+func (s *SpotifyService) FetchEmbedData(data *SpotifyData, client *http.Client) {
 	embedUrl := strings.Replace(data.URL, "/playlist/", "/embed/playlist/", 1)
 	embedUrl = strings.Replace(embedUrl, "/album/", "/embed/album/", 1)
 	embedUrl = strings.Replace(embedUrl, "/track/", "/embed/track/", 1)
@@ -192,15 +192,15 @@ func FetchEmbedData(data *SpotifyData, client *http.Client) {
 		return
 	}
 
-	doc.Find("script#amino-initial-data").Each(func(i int, s *goquery.Selection) {
-		ParseNextData(s.Text(), data)
+	doc.Find("script#amino-initial-data").Each(func(i int, sel *goquery.Selection) {
+		s.ParseNextData(sel.Text(), data)
 	})
-	doc.Find("script#__NEXT_DATA__").Each(func(i int, s *goquery.Selection) {
-		ParseNextData(s.Text(), data)
+	doc.Find("script#__NEXT_DATA__").Each(func(i int, sel *goquery.Selection) {
+		s.ParseNextData(sel.Text(), data)
 	})
 }
 
-func ParseNextData(jsonStr string, data *SpotifyData) {
+func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 	var generic map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &generic); err != nil {
 		return
@@ -311,7 +311,7 @@ func ParseNextData(jsonStr string, data *SpotifyData) {
 }
 
 // join name's like artist1, artist 2.
-func ParseArtistRaw(raw json.RawMessage) string {
+func (s *SpotifyService) ParseArtistRaw(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
 	}

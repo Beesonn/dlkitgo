@@ -33,7 +33,7 @@ func NewSpotify(client *http.Client) *SpotifyService {
 
 func (s *SpotifyService) Stream(url string) (StreamResult, error) {
 	if url == "" {
-		return StreamResult{}, errors.New("URL or ID not found")
+		return StreamResult{}, errors.New("url or id cannot be empty")
 	}
 
 	info, err := s.GetInfo(url)

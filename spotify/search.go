@@ -32,7 +32,7 @@ type SearchResponse struct {
 
 func  (s *SpotifyService) Search(query string, searchType ...string) (*SearchResponse, error) {
     if query == "" {
-        return nil, errors.New("query is empty")
+        return nil, errors.New("query cannot be empty")
     }
     sType := "all"
     if len(searchType) > 0 && searchType[0] != "" {
