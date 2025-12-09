@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,7 +23,7 @@ type SpotifyData struct {
 	Name       string      `json:"name"`
 	Artist     string      `json:"artist"`
 	SpotifyID  string      `json:"spotify_id"`
-	URL        string      `json:"url"` // This holds the resolved (canonical) URL
+	URL        string      `json:"url"` 
 	Image      string      `json:"image"`
 	PreviewURL string      `json:"preview_url"`
 	Tracks     []TrackInfo `json:"tracks"`
@@ -40,7 +39,7 @@ type LdJson struct {
 		ContentURL string `json:"contentUrl"`
 	} `json:"audio"`
 	Track []struct {
-		ItemListElement []struct { // Adjusted for common ItemList structure
+		ItemListElement []struct { 
 			Item struct {
 				Name       string          `json:"name"`
 				PreviewURL string          `json:"previewUrl"`
@@ -65,16 +64,13 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 		URL:    url,
 	}
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return data, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-	resp, err := client.Do(req)
+	resp, err := s.Client.Do(req)
 	if err != nil {
 		return data, errors.New("Invalid URL or ID")
 	}
@@ -98,7 +94,7 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 		return data, errors.New("Invalid URL or ID")
 	}
 
-	// Fallback: Extract image from meta og:image
+	// Extract image from meta og:image
 	if imgSel := doc.Find(`meta[property="og:image"]`); imgSel.Length() > 0 {
 		if img, exists := imgSel.Attr("content"); exists {
 			data.Image = img
@@ -116,7 +112,7 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 			// If not array, try as single object
 			var singleLd LdJson
 			if json.Unmarshal([]byte(s.Text()), &singleLd) == nil {
-				processLdJson(&singleLd, &data)
+				ProcessLdJson(&singleLd, &data)
 			}
 			return
 		}
@@ -124,20 +120,20 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 		for _, raw := range ldjsons {
 			var ld LdJson
 			if err := json.Unmarshal(raw, &ld); err == nil {
-				processLdJson(&ld, &data)
+				ProcessLdJson(&ld, &data)
 			}
 		}
 	})
 
 	// Fallback for playlists/albums, and now also tracks if LD incomplete
 	if (data.Type == "playlist" || data.Type == "album" || data.Type == "track") && len(data.Tracks) == 0 && data.Name == "" {
-		FetchEmbedData(&data, client)
+		FetchEmbedData(&data, s.Client)
 	}
 
 	return data, nil
 }
 
-func processLdJson(ld *LdJson, data *SpotifyData) {
+func ProcessLdJson(ld *LdJson, data *SpotifyData) {
 	if ld.Type == "MusicRecording" {
 		data.Name = ld.Name
 		if len(ld.Image) > 0 {
@@ -210,10 +206,8 @@ func ParseNextData(jsonStr string, data *SpotifyData) {
 		return
 	}
 
-	// Recover from panics in type assertions
 	defer func() {
 		if r := recover(); r != nil {
-			// Silent recover
 		}
 	}()
 
@@ -291,7 +285,7 @@ func ParseNextData(jsonStr string, data *SpotifyData) {
 			}
 		}
 	} else {
-		// For single track, add entity as track
+		// for single track
 		if data.Type == "track" && data.Name != "" {
 			uri, _ := entity["uri"].(string)
 			parts := strings.Split(uri, ":")
@@ -308,16 +302,15 @@ func ParseNextData(jsonStr string, data *SpotifyData) {
 		}
 	}
 
-	// If single track, populate main fields from first track
 	if len(data.Tracks) > 0 && data.Type == "track" && data.Name == "" {
 		data.Name = data.Tracks[0].Name
 		data.Artist = data.Tracks[0].Artist
 		data.PreviewURL = data.Tracks[0].PreviewURL
-		data.Image = "" // Image from meta
+		data.Image = "" 
 	}
 }
 
-// join name like artist1, artist2.....
+// join name's like artist1, artist 2.
 func ParseArtistRaw(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""

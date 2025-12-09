@@ -14,7 +14,7 @@ type Dlkit struct {
 
 func NewClient() *Dlkit {
     c := &Dlkit{
-        client: &http.Client{ Timeout: 10 * time.Second },
+        client: &http.Client{ Timeout: 5 * time.Second },
     }
 
     c.Spotify = spotify.NewSpotify(c.client)
