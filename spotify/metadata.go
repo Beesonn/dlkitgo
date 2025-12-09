@@ -2,10 +2,10 @@ package spotify
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
-	"errors"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -23,23 +23,23 @@ type SpotifyData struct {
 	Name       string      `json:"name"`
 	Artist     string      `json:"artist"`
 	SpotifyID  string      `json:"spotify_id"`
-	URL        string      `json:"url"` 
+	URL        string      `json:"url"`
 	Image      string      `json:"image"`
 	PreviewURL string      `json:"preview_url"`
 	Tracks     []TrackInfo `json:"tracks"`
 }
 
 type LdJson struct {
-	Context   string          `json:"@context,omitempty"`
-	Type      string          `json:"@type"`
-	Name      string          `json:"name"`
-	Image     []string        `json:"image"`
-	ByArtist  json.RawMessage `json:"byArtist"`
-	Audio     struct {
+	Context  string          `json:"@context,omitempty"`
+	Type     string          `json:"@type"`
+	Name     string          `json:"name"`
+	Image    []string        `json:"image"`
+	ByArtist json.RawMessage `json:"byArtist"`
+	Audio    struct {
 		ContentURL string `json:"contentUrl"`
 	} `json:"audio"`
 	Track []struct {
-		ItemListElement []struct { 
+		ItemListElement []struct {
 			Item struct {
 				Name       string          `json:"name"`
 				PreviewURL string          `json:"previewUrl"`
@@ -176,7 +176,7 @@ func (s *SpotifyService) FetchEmbedData(data *SpotifyData, client *http.Client) 
 
 	req, _ := http.NewRequest("GET", embedUrl, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return
@@ -231,7 +231,7 @@ func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 	if !ok {
 		return
 	}
-	
+
 	// Populate main fields for single entities (track, etc.)
 	if data.Name == "" {
 		if title, ok := entity["name"].(string); ok {
@@ -263,8 +263,8 @@ func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 
 			name, _ := trackMap["title"].(string)
 			artist, _ := trackMap["subtitle"].(string)
-			uri, _ := trackMap["uri"].(string) 
-            
+			uri, _ := trackMap["uri"].(string)
+
 			var previewUrl string
 			if audioPreview, ok := trackMap["audioPreview"].(map[string]interface{}); ok {
 				if urlI, ok := audioPreview["url"].(string); ok {
@@ -306,7 +306,7 @@ func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 		data.Name = data.Tracks[0].Name
 		data.Artist = data.Tracks[0].Artist
 		data.PreviewURL = data.Tracks[0].PreviewURL
-		data.Image = "" 
+		data.Image = ""
 	}
 }
 
@@ -315,7 +315,7 @@ func (s *SpotifyService) ParseArtistRaw(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
 	}
-	
+
 	var artists []ArtistObj
 	if err := json.Unmarshal(raw, &artists); err == nil {
 		names := []string{}

@@ -20,21 +20,21 @@ type InstagramData struct {
 }
 
 var (
-	InstagramURLPattern = regexp.MustCompile(`^https?://(?:www\.)?instagram\.com/(?:p|reel|tv)/[a-zA-Z0-9_-]+`)
-	LikesRegex         = regexp.MustCompile(`^([0-9Kk\.,]+) likes`)
-	CommentsRegex      = regexp.MustCompile(`,\s*([0-9Kk\.,]+)\s*comments`)
-	UserRegex          = regexp.MustCompile(`-\s*(.*?)\s*on`)
-	DateRegex          = regexp.MustCompile(`on\s(.*?):`)
-	CaptionRegex       = regexp.MustCompile(`:\s*"(.*)"`)
+	InstagramURLPattern = regexp.MustCompile(`^https?://(?:www\.)?instagram\.com/(?:p|reel|stories)/[a-zA-Z0-9_-]+`)
+	LikesRegex          = regexp.MustCompile(`^([0-9Kk\.,]+) likes`)
+	CommentsRegex       = regexp.MustCompile(`,\s*([0-9Kk\.,]+)\s*comments`)
+	UserRegex           = regexp.MustCompile(`-\s*(.*?)\s*on`)
+	DateRegex           = regexp.MustCompile(`on\s(.*?):`)
+	CaptionRegex        = regexp.MustCompile(`:\s*"(.*)"`)
 )
 
 func (insta *InstaService) GetInfo(url string) (InstagramData, error) {
 	var data InstagramData
-	
+
 	if url == "" {
 		return data, errors.New("url cannot be empty")
 	}
-	
+
 	if !InstagramURLPattern.MatchString(url) {
 		return data, errors.New("Invalid Instagram URL")
 	}

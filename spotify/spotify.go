@@ -9,14 +9,14 @@ type TrackSource struct {
 	Title  string `json:"title"`
 	Artist string `json:"artist"`
 	Image  string `json:"image"`
-	URL    string `json:"url"` 
+	URL    string `json:"url"`
 }
 
 type StreamResult struct {
-	URL    string        `json:"url"`    
-	ID     string        `json:"id"`     
-	Type   string        `json:"type"`   
-	Source []TrackSource `json:"source"` 
+	URL    string        `json:"url"`
+	ID     string        `json:"id"`
+	Type   string        `json:"type"`
+	Source []TrackSource `json:"source"`
 }
 
 type SpotifyService struct {
@@ -49,9 +49,9 @@ func (s *SpotifyService) Stream(url string) (StreamResult, error) {
 
 	var tracks []TrackInfo
 	if info.Type == "track" && len(info.Tracks) > 0 {
-		tracks = info.Tracks 
+		tracks = info.Tracks
 	} else {
-		tracks = info.Tracks 
+		tracks = info.Tracks
 	}
 
 	if len(tracks) == 0 {
@@ -65,15 +65,17 @@ func (s *SpotifyService) Stream(url string) (StreamResult, error) {
 			u, err := provider.Stream(track.URL)
 			if err == nil && u != "" {
 				streamURL = u
-				break 
+				break
 			}
 		}
-
+		if streamURL == "" {
+			return StreamResult{}, errors.New("all configured providers failed to stream the content")
+		}
 		result.Source = append(result.Source, TrackSource{
 			Title:  track.Name,
 			Artist: track.Artist,
 			Image:  info.Image,
-			URL:    streamURL, 
+			URL:    streamURL,
 		})
 	}
 
