@@ -74,7 +74,6 @@ func (insta *InstaService) GetInfo(url string) (InstagramData, error) {
 func (insta *InstaService) ExtractInstagramData(doc *goquery.Document) InstagramData {
 	data := InstagramData{
 		Username:  "",
-		Likes:     "",
 		Comments:  "",
 		Caption:   "",
 		Date:      "",
@@ -100,10 +99,6 @@ func (insta *InstaService) ExtractInstagramData(doc *goquery.Document) Instagram
 }
 
 func (insta *InstaService) ParseMetaDescription(descText string, data *InstagramData) {
-	if matches := LikesRegex.FindStringSubmatch(descText); len(matches) > 1 {
-		data.Likes = matches[1]
-	}
-
 	if matches := CommentsRegex.FindStringSubmatch(descText); len(matches) > 1 {
 		data.Comments = matches[1]
 	}
