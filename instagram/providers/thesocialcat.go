@@ -13,7 +13,7 @@ type TheSocialCat struct {
 }
 
 func (p *TheSocialCat) Name() string {
-	return "TheSocialCat"
+	return "thesocialcat"
 }
 
 func (p *TheSocialCat) BaseURL() string {

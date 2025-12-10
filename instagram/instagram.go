@@ -4,20 +4,47 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Beesonn/dlkitgo/instagram/providers"
 )
 
 type InstaService struct {
-	Client    *http.Client
-	Providers []Provider
+	Client        *http.Client
+	Providers     []Provider
+	FastVideoSave Provider
+	TheSocialCat  Provider
 }
 
 func NewInsta(client *http.Client) *InstaService {
-	return &InstaService{
-		Client:    client,
-		Providers: DefaultProviders(client),
+	service := &InstaService{
+		Client: client,
 	}
+
+	service.Providers = DefaultProviders(client)
+
+	for _, provider := range service.Providers {
+		if provider.Name() == "fastvideosave" {
+			service.FastVideoSave = provider
+		} else if provider.Name() == "thesocialcat" {
+			service.TheSocialCat = provider
+		}
+	}
+
+	return service
+}
+
+func (i *InstaService) GetProvider(name string) (Provider, error) {
+	if name == "" {
+		return nil, errors.New("please provide the provider name")
+	}
+	for _, provider := range i.Providers {
+		fmt.Println(provider.Name())
+		if provider.Name() == strings.ToLower(strings.TrimSpace(name)) {
+			return provider, nil
+		}
+	}
+	return nil, errors.New("sorry provider not found")
 }
 
 func (i *InstaService) Stream(url string) (providers.InstaStreamResult, error) {

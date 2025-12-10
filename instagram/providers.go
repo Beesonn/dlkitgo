@@ -14,5 +14,6 @@ type Provider interface {
 func DefaultProviders(client *http.Client) []Provider {
 	return []Provider{
 		&providers.FastVideoSave{Client: client},
+		&providers.TheSocialCat{Client: client},
 	}
 }

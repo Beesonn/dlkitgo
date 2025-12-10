@@ -14,7 +14,7 @@ type FastVideoSave struct {
 }
 
 func (p *FastVideoSave) Name() string {
-	return "FastVideoSave"
+	return "fastvideosave"
 }
 
 func (p *FastVideoSave) BaseURL() string {
