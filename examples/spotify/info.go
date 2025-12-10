@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	
+
 	"github.com/Beesonn/dlkitgo/dlkitgo"
 )
 
 func main() {
 	client := dlkitgo.NewClient()
 	url := "https://open.spotify.com/track/0B6ZJaS3I891FP8Ewx43Oh"
-	
+
 	info, err := client.Spotify.GetInfo(url)
 	if err != nil {
 		fmt.Printf("ERROR: GetInfo failed: %v\n", err)
@@ -20,7 +20,7 @@ func main() {
 		fmt.Println("ERROR: No track information available")
 		return
 	}
-	
+
 	fmt.Printf("Type: %s\n", info.Type)
 	fmt.Printf("Spotify ID: %s\n", info.SpotifyID)
 	fmt.Printf("Name: %s\n", info.Name)
@@ -30,7 +30,7 @@ func main() {
 	fmt.Printf("Duration: %d seconds\n", info.Duration)
 	fmt.Printf("Release Date: %s\n", info.ReleaseDate)
 	fmt.Printf("URL: %s\n", info.URL)
-	
+
 	fmt.Printf("\nTrack Details:\n")
 	for i, track := range info.Tracks {
 		fmt.Printf("Track %d:\n", i+1)
