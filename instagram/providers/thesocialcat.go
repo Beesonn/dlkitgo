@@ -1,0 +1,119 @@
+package providers
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+)
+
+type TheSocialCat struct {
+	Client *http.Client
+}
+
+func (p *TheSocialCat) Name() string {
+	return "TheSocialCat"
+}
+
+func (p *TheSocialCat) BaseURL() string {
+	return "https://thesocialcat.com"
+}
+
+func (p *TheSocialCat) Reel() bool {
+	return true
+}
+
+func (p *TheSocialCat) Story() bool {
+	return false
+}
+
+func (p *TheSocialCat) Post() bool {
+	return true
+}
+
+func (p *TheSocialCat) Stream(url string) (InstaStreamResult, error) {
+	result := InstaStreamResult{
+		Caption:  "",
+		Username: "",
+		Video:    0,
+		Photo:    0,
+		Source:   []MediaSource{},
+	}
+
+	if url == "" {
+		return result, fmt.Errorf("url cannot be empty")
+	}
+	if p.Client == nil {
+		p.Client = &http.Client{}
+	}
+
+	payload := map[string]string{
+		"url": url,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+
+	if err != nil {
+		return result, fmt.Errorf("failed to marshal JSON payload: %w", err)
+	}
+
+	apiURL := fmt.Sprintf("%s/api/instagram-download", p.BaseURL())
+
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := p.Client.Do(req)
+	if err != nil {
+		return result, fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return result, fmt.Errorf("failed to read response: %v", err)
+	}
+	var apiResult map[string]interface{}
+	if err := json.Unmarshal(body, &apiResult); err != nil {
+		return result, fmt.Errorf("failed to parse JSON response: %v", err)
+	}
+	if capText, ok := apiResult["caption"].(string); ok && capText != "" {
+		result.Caption = capText
+	}
+	if userName, ok := apiResult["username"].(string); ok && userName != "" {
+		result.Username = userName
+	}
+	if mediaData, ok := apiResult["mediaUrls"].([]interface{}); ok && mediaData != nil {
+		mediaType, ok := apiResult["type"].(string)
+		if !ok {
+			mediaType = ""
+		}
+		if mediaType == "video" {
+			result.Video = len(mediaData)
+		} else if mediaType == "image" {
+			result.Photo = len(mediaData)
+		}
+		thumb, ok := apiResult["thumbnail"].(string)
+		if !ok {
+			thumb = ""
+		}
+		startIndex := 0
+
+		for i, medias := range mediaData {
+			if urlStr, ok := medias.(string); ok && urlStr != "" {
+				result.Source = append(result.Source, MediaSource{
+					URL:       urlStr,
+					Type:      mediaType,
+					Thumbnail: thumb,
+					Index:     startIndex + i,
+				})
+			}
+		}
+		result.Total = result.Video + result.Photo
+	}
+
+	return result, nil
+}

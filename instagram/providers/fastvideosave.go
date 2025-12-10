@@ -18,7 +18,19 @@ func (p *FastVideoSave) Name() string {
 }
 
 func (p *FastVideoSave) BaseURL() string {
-	return "https://fastvideosave.net"
+	return "https://api.videodropper.app"
+}
+
+func (p *FastVideoSave) Reel() bool {
+	return true
+}
+
+func (p *FastVideoSave) Story() bool {
+	return true
+}
+
+func (p *FastVideoSave) Post() bool {
+	return true
 }
 
 func (p *FastVideoSave) EncodeURL(text string) (string, error) {
@@ -68,7 +80,9 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 		p.Client = &http.Client{}
 	}
 
-	req, err := http.NewRequest("GET", "https://api.videodropper.app/allinone", nil)
+	apiURL := fmt.Sprintf("%s/allinone", p.BaseURL())
+
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -93,10 +107,6 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 	var apiResult map[string]interface{}
 	if err := json.Unmarshal(body, &apiResult); err != nil {
 		return result, fmt.Errorf("failed to parse JSON response: %v", err)
-	}
-
-	if capText, ok := apiResult["caption"].(string); ok && capText != "" {
-		result.Caption = capText
 	}
 
 	if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
