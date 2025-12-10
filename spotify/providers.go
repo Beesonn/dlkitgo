@@ -11,7 +11,7 @@ type Provider interface {
 	Stream(url string) (string, error)
 }
 
-// Provider list factory
+// Provider list
 func DefaultProviders(client *http.Client) []Provider {
 	return []Provider{
 		&providers.SpotMate{Client: client},

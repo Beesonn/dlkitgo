@@ -36,29 +36,29 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 
 	reqGet, err := http.NewRequest("GET", p.BaseURL(), nil)
 	if err != nil {
-		return "", fmt.Errorf("spotmate: failed to create initial GET request: %w", err)
+		return "", fmt.Errorf("failed to create initial GET request: %w", err)
 	}
 	reqGet.Header.Set("User-Agent", userAgent)
 	reqGet.Header.Set("Accept", "text/html")
 
 	respGet, err := p.Client.Do(reqGet)
 	if err != nil {
-		return "", fmt.Errorf("spotmate: initial handshake failed: %w", err)
+		return "", fmt.Errorf("initial handshake failed: %w", err)
 	}
 	defer respGet.Body.Close()
 
 	if respGet.StatusCode != 200 {
-		return "", fmt.Errorf("spotmate: handshake returned status %d", respGet.StatusCode)
+		return "", fmt.Errorf("handshake returned status %d", respGet.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(respGet.Body)
 	if err != nil {
-		return "", fmt.Errorf("spotmate: failed to parse HTML: %w", err)
+		return "", fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
 	csrfToken, exists := doc.Find("meta[name='csrf-token']").Attr("content")
 	if !exists || csrfToken == "" {
-		return "", errors.New("spotmate: csrf token not found")
+		return "", errors.New("csrf token not found")
 	}
 
 	var sessionCookieValue string
@@ -69,7 +69,7 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 		}
 	}
 	if sessionCookieValue == "" {
-		return "", errors.New("spotmate: session cookie 'spotmateonline_session' not found")
+		return "", errors.New("session cookie 'spotmateonline_session' not found")
 	}
 
 	payload := map[string]string{
@@ -77,13 +77,13 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("spotmate: failed to marshal JSON payload: %w", err)
+		return "", fmt.Errorf("failed to marshal JSON payload: %w", err)
 	}
 
 	apiURL := fmt.Sprintf("%s/convert", p.BaseURL())
 	reqPost, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		return "", fmt.Errorf("spotmate: failed to create POST request: %w", err)
+		return "", fmt.Errorf("failed to create POST request: %w", err)
 	}
 
 	reqPost.Header.Set("User-Agent", userAgent)
@@ -96,32 +96,32 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 
 	respPost, err := p.Client.Do(reqPost)
 	if err != nil {
-		return "", fmt.Errorf("spotmate: conversion request failed: %w", err)
+		return "", fmt.Errorf("conversion request failed: %w", err)
 	}
 	defer respPost.Body.Close()
 
 	if respPost.StatusCode != 200 {
 		bodyBytes, readErr := io.ReadAll(respPost.Body)
 		if readErr != nil {
-			return "", fmt.Errorf("spotmate: conversion returned status %d", respPost.StatusCode)
+			return "", fmt.Errorf("conversion returned status %d", respPost.StatusCode)
 		}
-		return "", fmt.Errorf("spotmate: conversion returned status %d. Body: %s", respPost.StatusCode, string(bodyBytes))
+		return "", fmt.Errorf("conversion returned status %d. Body: %s", respPost.StatusCode, string(bodyBytes))
 	}
 
 	var result map[string]interface{}
 	if err := json.NewDecoder(respPost.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("spotmate: failed to decode JSON response: %w", err)
+		return "", fmt.Errorf("failed to decode JSON response: %w", err)
 	}
 
 	if errVal, exists := result["error"]; exists {
 		if errValBool, ok := errVal.(bool); ok && errValBool {
-			return "", errors.New("spotmate: API error")
+			return "", errors.New("API error")
 		}
 	}
 
 	downloadURL, ok := result["url"].(string)
 	if !ok || downloadURL == "" {
-		return "", errors.New("spotmate: download url not found in response")
+		return "", errors.New("download url not found in response")
 	}
 
 	return downloadURL, nil

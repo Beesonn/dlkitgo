@@ -6,10 +6,12 @@ import (
 )
 
 type TrackSource struct {
-	Title  string `json:"title"`
-	Artist string `json:"artist"`
-	Image  string `json:"image"`
-	URL    string `json:"url"`
+	Title       string `json:"title"`
+	Artist      string `json:"artist"`
+	Image       string `json:"image"`
+	URL         string `json:"url"`
+	Duration    int    `json:"duration"`
+	ReleaseDate string `json:"release_date"`
 }
 
 type StreamResult struct {
@@ -68,15 +70,16 @@ func (s *SpotifyService) Stream(url string) (StreamResult, error) {
 				break
 			}
 		}
-		if streamURL == "" {
-			return StreamResult{}, errors.New("all configured providers failed to stream the content")
+		if streamURL != "" {
+			result.Source = append(result.Source, TrackSource{
+				Title:       track.Name,
+				Artist:      track.Artist,
+				Image:       track.Image,
+				URL:         streamURL,
+				ReleaseDate: track.ReleaseDate,
+				Duration:    track.Duration,
+			})
 		}
-		result.Source = append(result.Source, TrackSource{
-			Title:  track.Name,
-			Artist: track.Artist,
-			Image:  info.Image,
-			URL:    streamURL,
-		})
 	}
 
 	return result, nil
