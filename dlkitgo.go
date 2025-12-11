@@ -6,21 +6,24 @@ import (
 
 	"github.com/Beesonn/dlkitgo/instagram"
 	"github.com/Beesonn/dlkitgo/spotify"
+   "github.com/Beesonn/dlkitgo/youtube"
 )
 
 type Dlkit struct {
-	client    *http.Client
+	Client    *http.Client
 	Spotify   *spotify.SpotifyService
 	Instagram *instagram.InstaService
+   Youtube *youtube.TubeService
 }
 
 func NewClient() *Dlkit {
 	c := &Dlkit{
-		client: &http.Client{Timeout: 10 * time.Second},
+		Client: &http.Client{Timeout: 15 * time.Second},
 	}
 
-	c.Spotify = spotify.NewSpotify(c.client)
-	c.Instagram = instagram.NewInsta(c.client)
+	c.Spotify = spotify.NewSpotify(c.Client)
+	c.Instagram = instagram.NewInsta(c.Client)
+   c.Youtube = youtube.NewTube(c.Client)
 
 	return c
 }

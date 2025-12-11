@@ -1,8 +1,9 @@
 package instagram
 
 import (
-	"github.com/Beesonn/dlkitgo/instagram/providers"
 	"net/http"
+
+   "github.com/Beesonn/dlkitgo/instagram/providers"
 )
 
 type Provider interface {
