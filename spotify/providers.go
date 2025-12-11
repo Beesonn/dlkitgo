@@ -3,7 +3,7 @@ package spotify
 import (
 	"net/http"
 
-   "github.com/Beesonn/dlkitgo/spotify/providers"
+	"github.com/Beesonn/dlkitgo/spotify/providers"
 )
 
 type Provider interface {

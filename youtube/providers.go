@@ -1,9 +1,9 @@
-package youtube 
+package youtube
 
 import (
 	"net/http"
 
-  	"github.com/Beesonn/dlkitgo/youtube/providers"
+	"github.com/Beesonn/dlkitgo/youtube/providers"
 )
 
 type Provider interface {

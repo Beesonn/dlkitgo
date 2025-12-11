@@ -1,4 +1,4 @@
-package providers 
+package providers
 
 import "regexp"
 
@@ -10,12 +10,11 @@ type YTSource struct {
 }
 
 type YTResults struct {
-	Caption   string   `json:"caption"`
-	Thumbnail string   `json:"thumbnail"`
-	Duration  int      `json:"duration"`
-	Source   []YTSource `json:"sources"`
+	Caption   string     `json:"caption"`
+	Thumbnail string     `json:"thumbnail"`
+	Duration  int        `json:"duration"`
+	Source    []YTSource `json:"sources"`
 }
-
 
 func IsYouTubeURL(url string) bool {
 	patterns := []string{
@@ -23,7 +22,7 @@ func IsYouTubeURL(url string) bool {
 		`^(?:https?:\/\/)?(?:www\.)?youtube\.com\/live\/([a-zA-Z0-9_-]+)`,
 		`^(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c|channel|user)\/[a-zA-Z0-9_-]+`,
 	}
-	
+
 	for _, pattern := range patterns {
 		matched, _ := regexp.MatchString(pattern, url)
 		if matched {

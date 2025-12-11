@@ -1,11 +1,11 @@
-package youtube 
+package youtube
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
-   "fmt"
-  
-  "github.com/Beesonn/dlkitgo/youtube/providers"
+
+	"github.com/Beesonn/dlkitgo/youtube/providers"
 )
 
 type TubeService struct {
@@ -20,13 +20,12 @@ func NewTube(client *http.Client) *TubeService {
 	}
 }
 
-
 func (t *TubeService) Stream(url string) (providers.YTResults, error) {
 	if url == "" {
 		return providers.YTResults{}, errors.New("url cannot be empty")
 	}
-  
-   if !providers.IsYouTubeURL(url) {
+
+	if !providers.IsYouTubeURL(url) {
 		return providers.YTResults{}, fmt.Errorf("invalid YouTube URL")
 	}
 

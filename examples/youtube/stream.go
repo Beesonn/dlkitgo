@@ -18,5 +18,5 @@ func main() {
 	fmt.Printf("Duration: %d\n", stream.Duration)
 	fmt.Printf("Thumbnail: %s\n", stream.Thumbnail)
 	fmt.Printf("Quality: %s\n", stream.Source[0].Quality)
-   fmt.Printf("URL: %s\n", stream.Source[0].URL)
+	fmt.Printf("URL: %s\n", stream.Source[0].URL)
 }
