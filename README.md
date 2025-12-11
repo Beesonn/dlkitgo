@@ -56,7 +56,7 @@ If you would like to see an example for a platform that is not listed here, you 
 
 Make a new [issue](https://github.com/Beesonn/dlkitgo/issues/new?assignees=&labels=new+provider+request&template=request.yml) with the name of the provider on the title, as well as a link to the provider in the body paragraph.
 
-Contributing
+## Contributing
 
 We welcome contributions! Feel free to submit a Pull Request.
 
@@ -66,14 +66,10 @@ We welcome contributions! Feel free to submit a Pull Request.
 4. Push to the branch (`git push origin new`)
 5. Open a Pull Request
 
-License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-Disclaimer
-
-This library is for educational purposes only. Please respect the terms of service of the platforms you use this library with. Users are responsible for ensuring their usage complies with applicable laws and platform terms.
-
-Support
+## Support
 
 If you encounter any problems or have questions, please file an issue on the GitHub [issue](https://github.com/Beesonn/dlkitgo/issues).
