@@ -3,7 +3,7 @@ package dlkitgo
 import (
 	"fmt"
 
-	"github.com/Beesonn/dlkitgo/dlkitgo"
+	"github.com/Beesonn/dlkitgo"
 )
 
 func InstaByName() {
