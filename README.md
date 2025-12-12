@@ -4,6 +4,14 @@
     </a>
     <br>
     <b>A powerful Golang library for downloading content from popular platforms and third-party services</b>
+    <br>
+    <a href="https://github.com/Beesonn/dlkitgo/tags">
+        Releases
+    </a>
+    •
+    <a href="https://pkg.go.dev/github.com/Beesonn/dlkitgo">
+        Documentation
+    </a>
 </p>
 
 
