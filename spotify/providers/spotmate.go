@@ -28,6 +28,20 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 		return "", errors.New("cannot be empty")
 	}
 
+	initialResp, err := p.DoInitialRequest()
+	if err != nil {
+		return "", err
+	}
+
+	csrfToken, sessionCookie, err := p.ExtractTokens(initialResp)
+	if err != nil {
+		return "", err
+	}
+
+	return p.DoConversionRequest(spotifyURL, csrfToken, sessionCookie)
+}
+
+func (p *SpotMate) DoInitialRequest() (*http.Response, error) {
 	if p.Client == nil {
 		p.Client = &http.Client{}
 	}
@@ -36,48 +50,55 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 
 	reqGet, err := http.NewRequest("GET", p.BaseURL(), nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create initial GET request: %w", err)
+		return nil, fmt.Errorf("failed to create initial GET request: %w", err)
 	}
 	reqGet.Header.Set("User-Agent", userAgent)
 	reqGet.Header.Set("Accept", "text/html")
 
 	respGet, err := p.Client.Do(reqGet)
 	if err != nil {
-		return "", fmt.Errorf("initial handshake failed: %w", err)
+		return nil, fmt.Errorf("initial handshake failed: %w", err)
 	}
-	defer respGet.Body.Close()
 
 	if respGet.StatusCode != 200 {
-		return "", fmt.Errorf("handshake returned status %d", respGet.StatusCode)
+		respGet.Body.Close()
+		return nil, fmt.Errorf("handshake returned status %d", respGet.StatusCode)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(respGet.Body)
+	return respGet, nil
+}
+
+func (p *SpotMate) ExtractTokens(resp *http.Response) (string, string, error) {
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse HTML: %w", err)
+		return "", "", fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
 	csrfToken, exists := doc.Find("meta[name='csrf-token']").Attr("content")
 	if !exists || csrfToken == "" {
-		return "", errors.New("csrf token not found")
+		return "", "", errors.New("csrf token not found")
 	}
 
 	var sessionCookieValue string
-	for _, cookie := range respGet.Cookies() {
+	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "spotmateonline_session" {
 			sessionCookieValue = cookie.Value
 			break
 		}
 	}
 	if sessionCookieValue == "" {
-		return "", errors.New("session cookie 'spotmateonline_session' not found")
+		return "", "", errors.New("session cookie 'spotmateonline_session' not found")
 	}
 
-	payload := map[string]string{
-		"urls": spotifyURL,
-	}
-	jsonPayload, err := json.Marshal(payload)
+	return csrfToken, sessionCookieValue, nil
+}
+
+func (p *SpotMate) DoConversionRequest(spotifyURL, csrfToken, sessionCookie string) (string, error) {
+	jsonPayload, err := p.CreatePayload(spotifyURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON payload: %w", err)
+		return "", err
 	}
 
 	apiURL := fmt.Sprintf("%s/convert", p.BaseURL())
@@ -86,13 +107,7 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 		return "", fmt.Errorf("failed to create POST request: %w", err)
 	}
 
-	reqPost.Header.Set("User-Agent", userAgent)
-	reqPost.Header.Set("Content-Type", "application/json")
-	reqPost.Header.Set("X-CSRF-Token", csrfToken)
-	reqPost.Header.Set("Referer", p.BaseURL()+"/en")
-	reqPost.Header.Set("Origin", p.BaseURL())
-
-	reqPost.Header.Set("Cookie", fmt.Sprintf("spotmateonline_session=%s", sessionCookieValue))
+	p.SetRequestHeaders(reqPost, csrfToken, sessionCookie)
 
 	respPost, err := p.Client.Do(reqPost)
 	if err != nil {
@@ -100,16 +115,50 @@ func (p *SpotMate) Stream(spotifyURL string) (string, error) {
 	}
 	defer respPost.Body.Close()
 
-	if respPost.StatusCode != 200 {
-		bodyBytes, readErr := io.ReadAll(respPost.Body)
-		if readErr != nil {
-			return "", fmt.Errorf("conversion returned status %d", respPost.StatusCode)
-		}
-		return "", fmt.Errorf("conversion returned status %d. Body: %s", respPost.StatusCode, string(bodyBytes))
+	return p.ParseResponse(respPost)
+}
+
+func (p *SpotMate) CreatePayload(spotifyURL string) ([]byte, error) {
+	payload := map[string]string{
+		"urls": spotifyURL,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON payload: %w", err)
+	}
+	return jsonPayload, nil
+}
+
+func (p *SpotMate) SetRequestHeaders(req *http.Request, csrfToken, sessionCookie string) {
+	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	req.Header.Set("Referer", p.BaseURL()+"/en")
+	req.Header.Set("Origin", p.BaseURL())
+	req.Header.Set("Cookie", fmt.Sprintf("spotmateonline_session=%s", sessionCookie))
+}
+
+func (p *SpotMate) ParseResponse(resp *http.Response) (string, error) {
+	if resp.StatusCode != 200 {
+		return p.HandleErrorResponse(resp)
 	}
 
+	return p.ExtractDownloadURL(resp)
+}
+
+func (p *SpotMate) HandleErrorResponse(resp *http.Response) (string, error) {
+	bodyBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return "", fmt.Errorf("conversion returned status %d", resp.StatusCode)
+	}
+	return "", fmt.Errorf("conversion returned status %d. Body: %s", resp.StatusCode, string(bodyBytes))
+}
+
+func (p *SpotMate) ExtractDownloadURL(resp *http.Response) (string, error) {
 	var result map[string]interface{}
-	if err := json.NewDecoder(respPost.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", fmt.Errorf("failed to decode JSON response: %w", err)
 	}
 

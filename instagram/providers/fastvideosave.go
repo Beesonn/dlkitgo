@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,7 +48,7 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %v", err)
+		return "", err
 	}
 
 	encrypted := make([]byte, len(paddedData))
@@ -59,21 +60,24 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 }
 
 func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
-	result := InstaStreamResult{
-		Caption:  "",
-		Username: "",
-		Video:    0,
-		Photo:    0,
-		Source:   []MediaSource{},
-	}
+	var result InstaStreamResult
 
 	if url == "" {
-		return result, fmt.Errorf("url cannot be empty")
+		return result, errors.New("url cannot be empty")
 	}
 
+	apiResult, err := p.DoRequest(url)
+	if err != nil {
+		return result, err
+	}
+
+	return p.ExtractMedia(apiResult), nil
+}
+
+func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
 	encryptedURL, err := p.EncodeURL(url)
 	if err != nil {
-		return result, fmt.Errorf("failed to encrypt URL: %v", err)
+		return nil, errors.New("failed to encrypt URL")
 	}
 
 	if p.Client == nil {
@@ -84,7 +88,7 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
-		return result, fmt.Errorf("failed to create request: %v", err)
+		return nil, errors.New("failed to create request")
 	}
 
 	req.Header.Set("Accept", "*/*")
@@ -95,18 +99,29 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 
 	resp, err := p.Client.Do(req)
 	if err != nil {
-		return result, fmt.Errorf("HTTP request failed: %v", err)
+		return nil, errors.New("HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return result, fmt.Errorf("failed to read response: %v", err)
+		return nil, errors.New("failed to read response")
 	}
 
 	var apiResult map[string]interface{}
 	if err := json.Unmarshal(body, &apiResult); err != nil {
-		return result, fmt.Errorf("failed to parse JSON response: %v", err)
+		return nil, errors.New("failed to parse JSON response")
+	}
+	return apiResult, nil
+}
+
+func (p *FastVideoSave) ExtractMedia(apiResult map[string]interface{}) InstaStreamResult {
+	result := InstaStreamResult{
+		Caption:  "",
+		Username: "",
+		Video:    0,
+		Photo:    0,
+		Source:   []MediaSource{},
 	}
 
 	if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
@@ -159,7 +174,5 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 		}
 	}
 
-	result.Total = result.Video + result.Photo
-
-	return result, nil
+	return result
 }
