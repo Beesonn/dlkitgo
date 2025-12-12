@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+    "errors"
 	"io"
 	"net/http"
 )
@@ -58,20 +59,8 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 	return hex.EncodeToString(encrypted), nil
 }
 
-func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
-	result := InstaStreamResult{
-		Caption:  "",
-		Username: "",
-		Video:    0,
-		Photo:    0,
-		Source:   []MediaSource{},
-	}
-
-	if url == "" {
-		return result, fmt.Errorf("url cannot be empty")
-	}
-
-	encryptedURL, err := p.EncodeURL(url)
+func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
+    encryptedURL, err := p.EncodeURL(url)
 	if err != nil {
 		return result, fmt.Errorf("failed to encrypt URL: %v", err)
 	}
@@ -95,21 +84,44 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 
 	resp, err := p.Client.Do(req)
 	if err != nil {
-		return result, fmt.Errorf("HTTP request failed: %v", err)
+		return nil, fmt.Errorf("HTTP request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return result, fmt.Errorf("failed to read response: %v", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	var apiResult map[string]interface{}
 	if err := json.Unmarshal(body, &apiResult); err != nil {
-		return result, fmt.Errorf("failed to parse JSON response: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON response: %v", err)
+    }
+    return apiResult, nil
+}
+
+func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {	
+	if url == "" {
+		return result, errors.New("url cannot be empty")
 	}
 
-	if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
+    apiResult, err = p.DoRequest(url)
+    if err != nil {
+        return result, err
+    }    
+    
+    return p.ExtractMedia(apiResult), nil
+}
+
+func (p *FastVideoSave) ExtractMedia(images map[string]interface{}) InstaStreamResult {
+    result := InstaStreamResult{
+		Caption:  "",
+		Username: "",
+		Video:    0,
+		Photo:    0,
+		Source:   []MediaSource{},
+    }
+    if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
 		result.Video = len(videoData)
 
 		for i, v := range videoData {
@@ -141,9 +153,9 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 				})
 			}
 		}
-	}
-
-	if images, ok := apiResult["image"].([]interface{}); ok && images != nil {
+    }
+    
+    if images, ok := apiResult["image"].([]interface{}); ok && images != nil {
 		result.Photo = len(images)
 		startIndex := result.Video
 
@@ -158,8 +170,6 @@ func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
 			}
 		}
 	}
-
-	result.Total = result.Video + result.Photo
-
-	return result, nil
-}
+    
+	return result
+}  
