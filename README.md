@@ -5,6 +5,10 @@
     <br>
     <b>A powerful Golang library for downloading content from popular platforms and third-party services</b>
     <br>
+    <a href="https://t.me/XBOTSUPPORTS">
+        Support 
+    </a>
+    •
     <a href="https://github.com/Beesonn/dlkitgo/tags">
         Releases
     </a>
