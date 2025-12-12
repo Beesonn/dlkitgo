@@ -4,7 +4,7 @@ import (
 	"fmt"
    "encoding/json"
 
-	"github.com/Beesonn/dlkitgo/dlkitgo"
+   "github.com/Beesonn/dlkitgo"
 )
 
 func YtTest() {
