@@ -11,7 +11,7 @@ func main() {
 	url := "https://www.instagram.com/reel/DKrA73pIjFn"
 	stream, err := client.Instagram.Stream(url)
 	if err != nil {
-		fmt.Printf("ERROR: Stream failed: %v", err)
+		fmt.Println("ERROR: Stream failed:", err)
 	}
 
 	if len(stream.Source) == 0 {

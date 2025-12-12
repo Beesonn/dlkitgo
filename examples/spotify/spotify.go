@@ -12,7 +12,7 @@ func main() {
 	fmt.Println("Searching for track...")
 	search, err := client.Spotify.Search("never gonna give you up", "track")
 	if err != nil {
-		fmt.Println("ERROR: Search failed: %v", err)
+		fmt.Println("ERROR: Search failed:", err)
 	}
 
 	if len(search.Results) == 0 {
@@ -26,7 +26,7 @@ func main() {
 
 	stream, err := client.Spotify.Stream(track.URL)
 	if err != nil {
-		fmt.Println("ERROR: Stream failed: %v", err)
+		fmt.Println("ERROR: Stream failed:", err)
 	}
 
 	if len(stream.Source) == 0 {

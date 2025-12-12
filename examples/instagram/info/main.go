@@ -11,7 +11,7 @@ func main() {
 	url := "https://www.instagram.com/reel/DKrA73pIjFn"
 	info, err := client.Instagram.GetInfo(url)
 	if err != nil {
-		fmt.Printf("ERROR: GetInfo failed: %v", err)
+		fmt.Println("ERROR: GetInfo failed:", err)
 	}
 
 	fmt.Printf("Username: %s\n", info.Username)

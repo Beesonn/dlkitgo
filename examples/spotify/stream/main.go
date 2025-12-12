@@ -11,7 +11,7 @@ func main() {
 	url := "https://open.spotify.com/track/0B6ZJaS3I891FP8Ewx43Oh"
 	stream, err := client.Spotify.Stream(url)
 	if err != nil {
-		fmt.Printf("ERROR: Stream failed: %v", err)
+		fmt.Println("ERROR: Stream failed:", err)
 	}
 
 	if len(stream.Source) == 0 {

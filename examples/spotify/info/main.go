@@ -12,7 +12,7 @@ func main() {
 
 	info, err := client.Spotify.GetInfo(url)
 	if err != nil {
-		fmt.Printf("ERROR: GetInfo failed: %v\n", err)
+		fmt.Println("ERROR: GetInfo failed:", err)
 		return
 	}
 
