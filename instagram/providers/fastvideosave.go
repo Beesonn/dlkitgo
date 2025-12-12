@@ -4,8 +4,8 @@ import (
 	"crypto/aes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-    "errors"
 	"io"
 	"net/http"
 )
@@ -48,7 +48,7 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %v", err)
+		return "", err
 	}
 
 	encrypted := make([]byte, len(paddedData))
@@ -60,9 +60,9 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 }
 
 func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
-    encryptedURL, err := p.EncodeURL(url)
+	encryptedURL, err := p.EncodeURL(url)
 	if err != nil {
-		return result, fmt.Errorf("failed to encrypt URL: %v", err)
+		return nil, errors.New("failed to encrypt URL")
 	}
 
 	if p.Client == nil {
@@ -73,7 +73,7 @@ func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
-		return result, fmt.Errorf("failed to create request: %v", err)
+		return nil, errors.New("failed to create request")
 	}
 
 	req.Header.Set("Accept", "*/*")
@@ -84,44 +84,47 @@ func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
 
 	resp, err := p.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %v", err)
+		return nil, errors.New("HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %v", err)
+		return nil, errors.New("failed to read response")
 	}
 
 	var apiResult map[string]interface{}
 	if err := json.Unmarshal(body, &apiResult); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %v", err)
-    }
-    return apiResult, nil
+		return nil, errors.New("failed to parse JSON response")
+	}
+	return apiResult, nil
 }
 
-func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {	
+func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
+	var result InstaStreamResult
+
 	if url == "" {
 		return result, errors.New("url cannot be empty")
 	}
 
-    apiResult, err = p.DoRequest(url)
-    if err != nil {
-        return result, err
-    }    
-    
-    return p.ExtractMedia(apiResult), nil
+	apiResult, err := p.DoRequest(url)
+	if err != nil {
+		return result, err
+	}
+
+	return p.ExtractMedia(apiResult), nil
 }
 
-func (p *FastVideoSave) ExtractMedia(images map[string]interface{}) InstaStreamResult {
-    result := InstaStreamResult{
+func (p *FastVideoSave) ExtractMedia(apiResult map[string]interface{}) InstaStreamResult {
+	result := InstaStreamResult{
 		Caption:  "",
 		Username: "",
 		Video:    0,
 		Photo:    0,
 		Source:   []MediaSource{},
-    }
-    if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
+	}
+
+	if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
 		result.Video = len(videoData)
 
 		for i, v := range videoData {
@@ -153,9 +156,9 @@ func (p *FastVideoSave) ExtractMedia(images map[string]interface{}) InstaStreamR
 				})
 			}
 		}
-    }
-    
-    if images, ok := apiResult["image"].([]interface{}); ok && images != nil {
+	}
+
+	if images, ok := apiResult["image"].([]interface{}); ok && images != nil {
 		result.Photo = len(images)
 		startIndex := result.Video
 
@@ -170,6 +173,6 @@ func (p *FastVideoSave) ExtractMedia(images map[string]interface{}) InstaStreamR
 			}
 		}
 	}
-    
+
 	return result
-}  
+}
