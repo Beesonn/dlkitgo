@@ -1,13 +1,9 @@
-package dlkitgo_test
+package dlkitgo
 
-import (
-	"fmt"
-
-   "github.com/Beesonn/dlkitgo"
-)
+import "fmt"
 
 func InstaByName() {
-	client := dlkitgo.NewClient()
+	client := NewClient()
 	url := "https://www.instagram.com/reel/DKrA73pIjFn"
 	insta, _ := client.Instagram.GetProvider("thesocialcat")
 	stream, err := insta.Stream(url)

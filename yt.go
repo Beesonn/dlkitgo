@@ -1,14 +1,12 @@
-package dlkitgo_test
+package dlkitgo
 
 import (
 	"encoding/json"
 	"fmt"
-
-   "github.com/Beesonn/dlkitgo"
 )
 
 func YtTest() {
-	client := dlkitgo.NewClient()
+	client := NewClient()
 	url := "https://youtu.be/YVkUvmDQ3HY?si=WX_soUJPp66u-mcF"
 	stream, err := client.Youtube.Stream(url)
 	if err != nil {

@@ -1,4 +1,4 @@
-package dlkitgo_test
+package dlkitgo
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestSpInfo() {
-	client := dlkitgo.NewClient()
+	client := NewClient()
 	url := "https://open.spotify.com/track/0B6ZJaS3I891FP8Ewx43Oh"
 
 	info, err := client.Spotify.GetInfo(url)
