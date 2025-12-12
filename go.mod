@@ -1,6 +1,6 @@
 module github.com/Beesonn/dlkitgo
 
-go 1.24.5
+go 1.20
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0 // indirect
