@@ -1,6 +1,9 @@
-# dlkitgo
+<p align="center">
+    <img src="https://github.com/Beesonn/dlkitgo/raw/main/logo.png" alt="dlkitgo" width="256">
+</p>
 
-<img src="https://github.com/Beesonn/dlkitgo/raw/main/logo.png" alt="dlkitgo" width="256">
+
+# dlkitgo
 
 A powerful Golang library for downloading content from popular platforms and third-party services. Completely free and open-source.
 
