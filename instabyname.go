@@ -1,7 +1,9 @@
-package dlkitgo
+package dlkitgo_test
 
 import (
 	"fmt"
+
+   "github.com/Beesonn/dlkitgo"
 )
 
 func InstaByName() {

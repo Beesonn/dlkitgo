@@ -1,8 +1,10 @@
-package dlkitgo
+package dlkitgo_test
 
 import (
 	"encoding/json"
 	"fmt"
+
+   "github.com/Beesonn/dlkitgo"
 )
 
 func YtTest() {

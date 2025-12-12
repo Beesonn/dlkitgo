@@ -1,4 +1,4 @@
-package dlkitgo
+package dlkitgo_test
 
 import (
 	"encoding/json"
