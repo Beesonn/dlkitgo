@@ -1,5 +1,9 @@
 <p align="center">
-    <img src="https://github.com/Beesonn/dlkitgo/raw/main/logo.png" alt="dlkitgo" width="256">
+    <a href="https://github.com/Beesonn/dlkitgo">
+        <img src="https://github.com/Beesonn/dlkitgo/raw/main/logo.png" alt="dlkitgo" width="256">
+    </a>
+    <br>
+    <b>A powerful Golang library for downloading content from popular platforms and third-party services</b>
 </p>
 
 
