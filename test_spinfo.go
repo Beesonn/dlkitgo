@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Beesonn/dlkitgo/dlkitgo"
+	"github.com/Beesonn/dlkitgo"
 )
 
 func TestSpInfo() {
