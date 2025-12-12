@@ -5,8 +5,8 @@
     <br>
     <b>Go library for downloading content across multiple platforms</b>
     <br>
-    <a href="https://t.me/XBOTSUPPORTS">
-        Support 
+    <a href="https://github.com/Beesonn/dlkitgo">
+        Source 
     </a>
     •
     <a href="https://github.com/Beesonn/dlkitgo/tags">
