@@ -3,8 +3,8 @@ package providers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 )

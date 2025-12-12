@@ -131,7 +131,7 @@ func (p *SpotMate) CreatePayload(spotifyURL string) ([]byte, error) {
 
 func (p *SpotMate) SetRequestHeaders(req *http.Request, csrfToken, sessionCookie string) {
 	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-	
+
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-CSRF-Token", csrfToken)
