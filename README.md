@@ -19,12 +19,28 @@
 </p>
 <br>
 Dlkitgo is a Golang library that can download, search, info etc. from popular platforms and third parties. Completely free.
-<br>
-[![GoDoc](https://godoc.org/github.com/Beesonn/dlkitgo?status.svg)](https://godoc.org/github.com/Beesonn/dlkitgo)
-[![Go Report Card](https://goreportcard.com/badge/github.com/Beesonn/dlkitgo)](https://goreportcard.com/report/github.com/Beesonn/dlkitgo)
-[![License](https://img.shields.io/github/license/Beesonn/dlkitgo.svg)](https://img.shields.io/github/license/Beesonn/dlkitgo.svg)
-[![Stars](https://img.shields.io/github/stars/Beesonn/dlkitgo.svg?style=social&label=Stars)](https://img.shields.io/github/stars/Beesonn/dlkitgo.svg?style=social&label=Stars)
-[![Forks](https://img.shields.io/github/forks/Beesonn/dlkitgo.svg?style=social&label=Fork)](https://img.shields.io/github/forks/Beesonn/dlkitgo.svg?style=social&label=Fork)
+
+<p align="center">
+  <a href="https://godoc.org/github.com/Beesonn/dlkitgo">
+    <img src="https://godoc.org/github.com/Beesonn/dlkitgo?status.svg" alt="Go Doc">
+  </a>
+
+  <a href="https://goreportcard.com/report/github.com/Beesonn/dlkitgo">
+    <img src="https://goreportcard.com/badge/github.com/Beesonn/dlkitgo" alt="Go Report Card">
+  </a>
+
+  <a href="https://img.shields.io/github/license/Beesonn/dlkitgo.svg">
+    <img src="https://img.shields.io/github/license/Beesonn/dlkitgo.svg" alt="License">
+  </a>
+
+  <a href="https://github.com/Beesonn/dlkitgo/stargazers">
+    <img src="https://img.shields.io/github/stars/Beesonn/dlkitgo.svg?style=social&label=Stars" alt="Stars">
+  </a>
+
+  <a href="https://github.com/Beesonn/dlkitgo/network/members">
+    <img src="https://img.shields.io/github/forks/Beesonn/dlkitgo.svg?style=social&label=Forks" alt="Forks">
+  </a>
+</p>
 
 ## Quick Start
 
