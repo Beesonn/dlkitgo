@@ -21,7 +21,7 @@
 
 # dlkitgo
 
-A powerful Golang library for downloading content from popular platforms and third-party services. Completely free and open-source.
+A powerful Golang library for downloading content from popular platforms and third-party services Completely free.
 
 ## Quick Start
 
