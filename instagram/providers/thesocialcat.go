@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"errors"
 	"io"
 	"net/http"
 )
@@ -42,7 +43,7 @@ func (p *TheSocialCat) Stream(url string) (InstaStreamResult, error) {
 	}
 
 	if url == "" {
-		return result, fmt.Errorf("url cannot be empty")
+		return result, errors.New("url cannot be empty")
 	}
 
 	apiResult, err := p.DoRequest(url)
