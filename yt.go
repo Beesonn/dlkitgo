@@ -1,4 +1,4 @@
-package main
+package dlkitgo
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/Beesonn/dlkitgo/dlkitgo"
 )
 
-func main() {
+func YtTest() {
 	client := dlkitgo.NewClient()
 	url := "https://youtu.be/YVkUvmDQ3HY?si=WX_soUJPp66u-mcF"
 	stream, err := client.Youtube.Stream(url)
