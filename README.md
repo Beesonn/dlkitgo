@@ -3,7 +3,7 @@
         <img src="https://github.com/Beesonn/dlkitgo/raw/main/logo.png" alt="dlkitgo" width="256">
     </a>
     <br>
-    <b>A powerful Golang library for downloading content from popular platforms and third-party services</b>
+    <b>Go library for downloading content across multiple platforms</b>
     <br>
     <a href="https://t.me/XBOTSUPPORTS">
         Support 
