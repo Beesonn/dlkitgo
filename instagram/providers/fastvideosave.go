@@ -59,6 +59,21 @@ func (p *FastVideoSave) EncodeURL(text string) (string, error) {
 	return hex.EncodeToString(encrypted), nil
 }
 
+func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
+	var result InstaStreamResult
+
+	if url == "" {
+		return result, errors.New("url cannot be empty")
+	}
+
+	apiResult, err := p.DoRequest(url)
+	if err != nil {
+		return result, err
+	}
+
+	return p.ExtractMedia(apiResult), nil
+}
+
 func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
 	encryptedURL, err := p.EncodeURL(url)
 	if err != nil {
@@ -98,21 +113,6 @@ func (p *FastVideoSave) DoRequest(url string) (map[string]interface{}, error) {
 		return nil, errors.New("failed to parse JSON response")
 	}
 	return apiResult, nil
-}
-
-func (p *FastVideoSave) Stream(url string) (InstaStreamResult, error) {
-	var result InstaStreamResult
-
-	if url == "" {
-		return result, errors.New("url cannot be empty")
-	}
-
-	apiResult, err := p.DoRequest(url)
-	if err != nil {
-		return result, err
-	}
-
-	return p.ExtractMedia(apiResult), nil
 }
 
 func (p *FastVideoSave) ExtractMedia(apiResult map[string]interface{}) InstaStreamResult {
