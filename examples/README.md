@@ -6,8 +6,9 @@ This folder contains practical examples for using dlkitgo, a free library for ac
 
 Currently, the collection includes examples for the following platforms:
 
-*   **Spotify:** [examples/spotify](/examples/spotify)
-*   **Instagram:** [examples/instagram](/examples/instagram)
+*   **Spotify:** [examples](/examples/spotify)
+*   **Instagram:** [examples](/examples/instagram)
+*   **Youtube:** [examples](/examples/youtube) 
 
 To use an example, go into the specific platform's folder and follow the instructions in its `README.md` file.
 
