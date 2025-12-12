@@ -23,6 +23,12 @@
 
 dlkitgo is a Golang library that can download, search, info etc. from popular platforms and third parties. Completely free.
 
+[![GoDoc](https://godoc.org/github.com/Beesonn/dlkitgo?status.svg)](https://godoc.org/github.com/Beesonn/dlkitgo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Beesonn/dlkitgo)](https://goreportcard.com/report/github.com/Beesonn/dlkitgo)
+[![License](https://img.shields.io/github/license/Beesonn/dlkitgo.svg)](https://img.shields.io/github/license/Beesonn/dlkitgo.svg)
+[![Stars](https://img.shields.io/github/stars/Beesonn/dlkitgo.svg?style=social&label=Stars)](https://img.shields.io/github/stars/Beesonn/dlkitgo.svg?style=social&label=Stars)
+[![Forks](https://img.shields.io/github/forks/Beesonn/dlkitgo.svg?style=social&label=Fork)](https://img.shields.io/github/forks/Beesonn/dlkitgo.svg?style=social&label=Fork)
+
 ## Quick Start
 
 ```go
