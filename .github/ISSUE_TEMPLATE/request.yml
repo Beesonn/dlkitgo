@@ -1,6 +1,6 @@
 name: Provider Request
 description: Request a new platform example to be added to dlkitgo
-title: "[Provider Request]: "
+title: "Provider Request: "
 labels: ["provider request"]
 assignees: []
 body:
