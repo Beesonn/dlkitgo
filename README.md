@@ -50,7 +50,7 @@ package main
 import (
     "fmt"
 
-    "github.com/Beesonn/dlkitgo/dlkitgo"
+    "github.com/Beesonn/dlkitgo"
 )
 
 func main() {
