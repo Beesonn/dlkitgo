@@ -54,11 +54,11 @@ type LdJson struct {
 	Track []struct {
 		ItemListElement []struct {
 			Item struct {
-				Name          string          `json:"name"`
-				PreviewURL    string          `json:"previewUrl"`
-				URL           string          `json:"url"`
-				ByArtist      json.RawMessage `json:"byArtist"`
-				Audio         struct {
+				Name       string          `json:"name"`
+				PreviewURL string          `json:"previewUrl"`
+				URL        string          `json:"url"`
+				ByArtist   json.RawMessage `json:"byArtist"`
+				Audio      struct {
 					ContentURL string `json:"contentUrl"`
 					Duration   string `json:"duration,omitempty"`
 				} `json:"audio"`
@@ -142,17 +142,17 @@ func (s *SpotifyService) EnhanceTrackData(data *SpotifyData) {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	
+
 	for i := range data.Tracks {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			
+
 			trackData, err := s.GetInfo(data.Tracks[idx].URL)
 			if err != nil {
 				return
 			}
-			
+
 			mu.Lock()
 			if trackData.Name != "" {
 				data.Tracks[idx].Name = trackData.Name
@@ -175,7 +175,7 @@ func (s *SpotifyService) EnhanceTrackData(data *SpotifyData) {
 			mu.Unlock()
 		}(i)
 	}
-	
+
 	wg.Wait()
 }
 
@@ -275,11 +275,11 @@ func (s *SpotifyService) ProcessMusicAlbum(ld *LdJson, data *SpotifyData) {
 }
 
 func (s *SpotifyService) AddAlbumTrack(item struct {
-	Name          string          `json:"name"`
-	PreviewURL    string          `json:"previewUrl"`
-	URL           string          `json:"url"`
-	ByArtist      json.RawMessage `json:"byArtist"`
-	Audio         struct {
+	Name       string          `json:"name"`
+	PreviewURL string          `json:"previewUrl"`
+	URL        string          `json:"url"`
+	ByArtist   json.RawMessage `json:"byArtist"`
+	Audio      struct {
 		ContentURL string `json:"contentUrl"`
 		Duration   string `json:"duration,omitempty"`
 	} `json:"audio"`
