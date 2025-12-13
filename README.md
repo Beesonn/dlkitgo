@@ -26,7 +26,7 @@ dlkitgo is a Golang library that can download, search, info etc. from popular pl
   </a>
 
   <a href="https://goreportcard.com/report/github.com/Beesonn/dlkitgo">
-    <img src="https://goreportcard.com/badge/github.com/Beesonn/dlkitgo" alt="Go Report Card">
+    <img src="https://goreportcard.com/badge/github.com/Beesonn/dlkitgo.svg" alt="Go Report Card">
   </a>
 
   <a href="https://img.shields.io/github/license/Beesonn/dlkitgo.svg">
