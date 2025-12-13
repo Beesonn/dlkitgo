@@ -124,55 +124,83 @@ func (p *FastVideoSave) ExtractMedia(apiResult map[string]interface{}) InstaStre
 		Source:   []MediaSource{},
 	}
 
-	if videoData, ok := apiResult["video"].([]interface{}); ok && videoData != nil {
-		result.Video = len(videoData)
-
-		for i, v := range videoData {
-			if videoObj, ok := v.(map[string]interface{}); ok {
-				videoURL := ""
-				thumbnail := ""
-
-				if vURL, ok := videoObj["video"].(string); ok && vURL != "" {
-					videoURL = vURL
-				}
-				if thumb, ok := videoObj["thumbnail"].(string); ok && thumb != "" {
-					thumbnail = thumb
-				}
-
-				if videoURL != "" {
-					result.Source = append(result.Source, MediaSource{
-						URL:       videoURL,
-						Type:      "video",
-						Thumbnail: thumbnail,
-						Index:     i,
-					})
-				}
-			} else if videoStr, ok := v.(string); ok && videoStr != "" {
-				result.Source = append(result.Source, MediaSource{
-					URL:       videoStr,
-					Type:      "video",
-					Thumbnail: "",
-					Index:     i,
-				})
-			}
-		}
-	}
-
-	if images, ok := apiResult["image"].([]interface{}); ok && images != nil {
-		result.Photo = len(images)
-		startIndex := result.Video
-
-		for i, img := range images {
-			if urlStr, ok := img.(string); ok && urlStr != "" {
-				result.Source = append(result.Source, MediaSource{
-					URL:       urlStr,
-					Type:      "photo",
-					Thumbnail: "",
-					Index:     startIndex + i,
-				})
-			}
-		}
-	}
+	p.ExtractVideos(apiResult, &result)
+	p.ExtractImages(apiResult, &result)
 
 	return result
+}
+
+func (p *FastVideoSave) ExtractVideos(apiResult map[string]interface{}, result *InstaStreamResult) {
+	videoData, ok := apiResult["video"].([]interface{})
+	if !ok || videoData == nil {
+		return
+	}
+
+	result.Video = len(videoData)
+
+	for i, v := range videoData {
+		p.AddVideoSource(v, i, result)
+	}
+}
+
+func (p *FastVideoSave) AddVideoSource(v interface{}, index int, result *InstaStreamResult) {
+	if videoObj, ok := v.(map[string]interface{}); ok {
+		p.AddVideoFromObject(videoObj, index, result)
+		return
+	}
+
+	if videoStr, ok := v.(string); ok && videoStr != "" {
+		result.Source = append(result.Source, MediaSource{
+			URL:       videoStr,
+			Type:      "video",
+			Thumbnail: "",
+			Index:     index,
+		})
+	}
+}
+
+func (p *FastVideoSave) AddVideoFromObject(videoObj map[string]interface{}, index int, result *InstaStreamResult) {
+	videoURL := ""
+	thumbnail := ""
+
+	if vURL, ok := videoObj["video"].(string); ok && vURL != "" {
+		videoURL = vURL
+	}
+	if thumb, ok := videoObj["thumbnail"].(string); ok && thumb != "" {
+		thumbnail = thumb
+	}
+
+	if videoURL != "" {
+		result.Source = append(result.Source, MediaSource{
+			URL:       videoURL,
+			Type:      "video",
+			Thumbnail: thumbnail,
+			Index:     index,
+		})
+	}
+}
+
+func (p *FastVideoSave) ExtractImages(apiResult map[string]interface{}, result *InstaStreamResult) {
+	images, ok := apiResult["image"].([]interface{})
+	if !ok || images == nil {
+		return
+	}
+
+	result.Photo = len(images)
+	startIndex := result.Video
+
+	for i, img := range images {
+		p.AddImageSource(img, startIndex+i, result)
+	}
+}
+
+func (p *FastVideoSave) AddImageSource(img interface{}, index int, result *InstaStreamResult) {
+	if urlStr, ok := img.(string); ok && urlStr != "" {
+		result.Source = append(result.Source, MediaSource{
+			URL:       urlStr,
+			Type:      "photo",
+			Thumbnail: "",
+			Index:     index,
+		})
+	}
 }
