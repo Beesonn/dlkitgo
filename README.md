@@ -18,7 +18,7 @@
     </a>
 </p>
 
-dlkitgo is a Golang library that can download, search, info etc. from popular platforms and third parties. Completely free.
+dlkitgo is a Golang library that can download, search, info etc. from popular platforms and third-party. Completely free.
 
 <p align="center">
   <a href="https://godoc.org/github.com/Beesonn/dlkitgo">
