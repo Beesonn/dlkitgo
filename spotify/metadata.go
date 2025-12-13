@@ -29,7 +29,7 @@ type SpotifyData struct {
 	SpotifyID   string      `json:"spotify_id"`
 	URL         string      `json:"url"`
 	Image       string      `json:"image"`
-	PreviewURL  string      `json:"preview_url"`
+	PreviewURL  string      `json:"preview_url,omitempty"`
 	Tracks      []TrackInfo `json:"tracks"`
 	Duration    int         `json:"duration,omitempty"`
 	ReleaseDate string      `json:"release_date,omitempty"`
