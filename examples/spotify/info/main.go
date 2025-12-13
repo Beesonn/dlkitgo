@@ -8,7 +8,7 @@ import (
 
 func main() {
 	client := dlkitgo.NewClient()
-	url := "https://open.spotify.com/track/0B6ZJaS3I891FP8Ewx43Oh"
+	url := "https://open.spotify.com/playlist/1EfeqA88EU9UgI1ITNQIaQ"
 
 	info, err := client.Spotify.GetInfo(url)
 	if err != nil {

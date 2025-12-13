@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -53,15 +54,16 @@ type LdJson struct {
 	Track []struct {
 		ItemListElement []struct {
 			Item struct {
-				Name       string          `json:"name"`
-				PreviewURL string          `json:"previewUrl"`
-				URL        string          `json:"url"`
-				ByArtist   json.RawMessage `json:"byArtist"`
-				Audio      struct {
+				Name          string          `json:"name"`
+				PreviewURL    string          `json:"previewUrl"`
+				URL           string          `json:"url"`
+				ByArtist      json.RawMessage `json:"byArtist"`
+				Audio         struct {
 					ContentURL string `json:"contentUrl"`
 					Duration   string `json:"duration,omitempty"`
 				} `json:"audio"`
-				Duration string `json:"duration,omitempty"`
+				Duration      string `json:"duration,omitempty"`
+				DatePublished string `json:"datePublished,omitempty"`
 			} `json:"item"`
 		} `json:"itemListElement"`
 	} `json:"track"`
@@ -123,10 +125,58 @@ func (s *SpotifyService) GetInfo(url string) (SpotifyData, error) {
 	})
 
 	if (data.Type == "playlist" || data.Type == "album" || data.Type == "track") && len(data.Tracks) == 0 && data.Name == "" {
-		s.FetchEmbedData(&data, s.Client)
+		s.FetchEmbedData(&data)
+	}
+
+	if data.Type == "playlist" || data.Type == "album" {
+		s.EnhanceTrackData(&data)
 	}
 
 	return data, nil
+}
+
+func (s *SpotifyService) EnhanceTrackData(data *SpotifyData) {
+	if len(data.Tracks) == 0 {
+		return
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	
+	for i := range data.Tracks {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			
+			trackData, err := s.GetInfo(data.Tracks[idx].URL)
+			if err != nil {
+				return
+			}
+			
+			mu.Lock()
+			if trackData.Name != "" {
+				data.Tracks[idx].Name = trackData.Name
+			}
+			if trackData.Artist != "" {
+				data.Tracks[idx].Artist = trackData.Artist
+			}
+			if trackData.ReleaseDate != "" {
+				data.Tracks[idx].ReleaseDate = trackData.ReleaseDate
+			}
+			if trackData.Image != "" {
+				data.Tracks[idx].Image = trackData.Image
+			}
+			if trackData.PreviewURL != "" {
+				data.Tracks[idx].PreviewURL = trackData.PreviewURL
+			}
+			if trackData.Duration > 0 {
+				data.Tracks[idx].Duration = trackData.Duration
+			}
+			mu.Unlock()
+		}(i)
+	}
+	
+	wg.Wait()
 }
 
 func (s *SpotifyService) ProcessLdJsonScript(scriptText string, data *SpotifyData) {
@@ -225,15 +275,16 @@ func (s *SpotifyService) ProcessMusicAlbum(ld *LdJson, data *SpotifyData) {
 }
 
 func (s *SpotifyService) AddAlbumTrack(item struct {
-	Name       string          `json:"name"`
-	PreviewURL string          `json:"previewUrl"`
-	URL        string          `json:"url"`
-	ByArtist   json.RawMessage `json:"byArtist"`
-	Audio      struct {
+	Name          string          `json:"name"`
+	PreviewURL    string          `json:"previewUrl"`
+	URL           string          `json:"url"`
+	ByArtist      json.RawMessage `json:"byArtist"`
+	Audio         struct {
 		ContentURL string `json:"contentUrl"`
 		Duration   string `json:"duration,omitempty"`
 	} `json:"audio"`
-	Duration string `json:"duration,omitempty"`
+	Duration      string `json:"duration,omitempty"`
+	DatePublished string `json:"datePublished,omitempty"`
 }, data *SpotifyData) {
 	var duration int
 	if item.Audio.Duration != "" {
@@ -246,13 +297,18 @@ func (s *SpotifyService) AddAlbumTrack(item struct {
 		}
 	}
 
+	releaseDate := data.ReleaseDate
+	if item.DatePublished != "" {
+		releaseDate = item.DatePublished
+	}
+
 	data.Tracks = append(data.Tracks, TrackInfo{
 		Name:        item.Name,
 		Artist:      s.ParseArtistRaw(item.ByArtist),
 		PreviewURL:  item.Audio.ContentURL,
 		URL:         item.URL,
 		Duration:    duration,
-		ReleaseDate: data.ReleaseDate,
+		ReleaseDate: releaseDate,
 		Image:       data.Image,
 	})
 }
@@ -264,7 +320,7 @@ func (s *SpotifyService) ProcessMusicPlaylist(ld *LdJson, data *SpotifyData) {
 	}
 }
 
-func (s *SpotifyService) FetchEmbedData(data *SpotifyData, client *http.Client) {
+func (s *SpotifyService) FetchEmbedData(data *SpotifyData) {
 	embedUrl := strings.Replace(data.URL, "/playlist/", "/embed/playlist/", 1)
 	embedUrl = strings.Replace(embedUrl, "/album/", "/embed/album/", 1)
 	embedUrl = strings.Replace(embedUrl, "/track/", "/embed/track/", 1)
@@ -272,7 +328,7 @@ func (s *SpotifyService) FetchEmbedData(data *SpotifyData, client *http.Client) 
 	req, _ := http.NewRequest("GET", embedUrl, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-	resp, err := client.Do(req)
+	resp, err := s.Client.Do(req)
 	if err != nil {
 		return
 	}
@@ -306,8 +362,8 @@ func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 		}
 	}()
 
-	entity, ok := s.ExtractEntity(generic)
-	if !ok {
+	entity := s.ExtractEntity(generic)
+	if entity == nil {
 		return
 	}
 
@@ -320,29 +376,47 @@ func (s *SpotifyService) ParseNextData(jsonStr string, data *SpotifyData) {
 	}
 }
 
-func (s *SpotifyService) ExtractEntity(generic map[string]interface{}) (map[string]interface{}, bool) {
+func (s *SpotifyService) ExtractEntity(generic map[string]interface{}) map[string]interface{} {
 	props, ok := generic["props"].(map[string]interface{})
 	if !ok {
-		return nil, false
+		return s.ExtractEntityAlternative(generic)
 	}
 	pageProps, ok := props["pageProps"].(map[string]interface{})
 	if !ok {
-		return nil, false
+		return s.ExtractEntityAlternative(generic)
 	}
 	state, ok := pageProps["state"].(map[string]interface{})
 	if !ok {
-		return nil, false
+		return s.ExtractEntityAlternative(generic)
 	}
 	d, ok := state["data"].(map[string]interface{})
 	if !ok {
-		return nil, false
+		return s.ExtractEntityAlternative(generic)
 	}
 	entity, ok := d["entity"].(map[string]interface{})
 	if !ok {
-		return nil, false
+		return s.ExtractEntityAlternative(generic)
 	}
 
-	return entity, true
+	return entity
+}
+
+func (s *SpotifyService) ExtractEntityAlternative(generic map[string]interface{}) map[string]interface{} {
+	if data, ok := generic["data"].(map[string]interface{}); ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			return entity
+		}
+	}
+
+	if props, ok := generic["props"].(map[string]interface{}); ok {
+		if data, ok := props["data"].(map[string]interface{}); ok {
+			if entity, ok := data["entity"].(map[string]interface{}); ok {
+				return entity
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *SpotifyService) ExtractBasicData(entity map[string]interface{}, data *SpotifyData) {
@@ -370,6 +444,19 @@ func (s *SpotifyService) ParseSingleTrackData(entity map[string]interface{}, dat
 	s.ExtractTrackPreviewURL(entity, data)
 	s.ExtractTrackDuration(entity, data)
 	s.ExtractTrackReleaseDate(entity, data)
+
+	if data.Image == "" {
+		if album, ok := entity["album"].(map[string]interface{}); ok {
+			if images, ok := album["images"].([]interface{}); ok && len(images) > 0 {
+				if imageMap, ok := images[0].(map[string]interface{}); ok {
+					if imgUrl, ok := imageMap["url"].(string); ok {
+						data.Image = imgUrl
+					}
+				}
+			}
+		}
+	}
+
 	s.CreateSingleTrackEntry(entity, data)
 }
 
@@ -495,7 +582,6 @@ func (s *SpotifyService) ProcessSingleTrack(trackMap map[string]interface{}, dat
 	uri, _ := trackMap["uri"].(string)
 	duration := s.ExtractTrackDurationFromMap(trackMap)
 	previewUrl := s.ExtractTrackPreviewURLFromMap(trackMap)
-	trackImage := s.ExtractTrackImage(trackMap, data.Image)
 
 	parts := strings.Split(uri, ":")
 	if len(parts) > 1 {
@@ -508,7 +594,7 @@ func (s *SpotifyService) ProcessSingleTrack(trackMap map[string]interface{}, dat
 			URL:         trackLink,
 			Duration:    duration,
 			ReleaseDate: data.ReleaseDate,
-			Image:       trackImage,
+			Image:       data.Image,
 		})
 	}
 }
@@ -550,21 +636,6 @@ func (s *SpotifyService) ExtractTrackPreviewURLFromMap(trackMap map[string]inter
 		}
 	}
 	return previewUrl
-}
-
-func (s *SpotifyService) ExtractTrackImage(trackMap map[string]interface{}, defaultImage string) string {
-	var trackImage string
-	if trackImages, ok := trackMap["images"].([]interface{}); ok && len(trackImages) > 0 {
-		if imageMap, ok := trackImages[0].(map[string]interface{}); ok {
-			if imgUrl, ok := imageMap["url"].(string); ok {
-				trackImage = imgUrl
-			}
-		}
-	}
-	if trackImage == "" {
-		trackImage = defaultImage
-	}
-	return trackImage
 }
 
 func (s *SpotifyService) ParseArtistRaw(raw json.RawMessage) string {
