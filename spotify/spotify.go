@@ -3,6 +3,7 @@ package spotify
 import (
 	"errors"
 	"net/http"
+	"sync"
 )
 
 type TrackSource struct {
@@ -60,27 +61,41 @@ func (s *SpotifyService) Stream(url string) (StreamResult, error) {
 		tracks = []TrackInfo{{Name: info.Name, Artist: info.Artist}}
 	}
 
-	for _, track := range tracks {
-		streamURL := ""
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	sources := make([]TrackSource, 0, len(tracks))
 
-		for _, provider := range s.Providers {
-			u, err := provider.Stream(track.URL)
-			if err == nil && u != "" {
-				streamURL = u
-				break
+	for _, track := range tracks {
+		wg.Add(1)
+		go func(t TrackInfo) {
+			defer wg.Done()
+
+			var streamURL string
+			for _, provider := range s.Providers {
+				u, err := provider.Stream(t.URL)
+				if err == nil && u != "" {
+					streamURL = u
+					break
+				}
 			}
-		}
-		if streamURL != "" {
-			result.Source = append(result.Source, TrackSource{
-				Title:       track.Name,
-				Artist:      track.Artist,
-				Image:       track.Image,
-				URL:         streamURL,
-				ReleaseDate: track.ReleaseDate,
-				Duration:    track.Duration,
-			})
-		}
+
+			if streamURL != "" {
+				mu.Lock()
+				sources = append(sources, TrackSource{
+					Title:       t.Name,
+					Artist:      t.Artist,
+					Image:       t.Image,
+					URL:         streamURL,
+					ReleaseDate: t.ReleaseDate,
+					Duration:    t.Duration,
+				})
+				mu.Unlock()
+			}
+		}(track)
 	}
+
+	wg.Wait()
+	result.Source = sources
 
 	return result, nil
 }
