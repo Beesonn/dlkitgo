@@ -2,7 +2,6 @@ package dlkitgo
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Beesonn/dlkitgo/instagram"
 	"github.com/Beesonn/dlkitgo/spotify"
@@ -18,7 +17,7 @@ type Dlkit struct {
 
 func NewClient() *Dlkit {
 	c := &Dlkit{
-		Client: &http.Client{Timeout: 15 * time.Second},
+		Client: &http.Client{},
 	}
 
 	c.Spotify = spotify.NewSpotify(c.Client)
