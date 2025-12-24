@@ -88,6 +88,7 @@ Check out our examples for different platforms:
 * Spotify: [example](examples/spotify)
 * Instagram: [examples](examples/instagram)
 * Youtube: [examples](/examples/youtube)
+* Pinterest: [examples](/examples/pinterest)
 * Coming soon...
 
 ## Provider Request

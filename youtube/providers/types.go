@@ -13,7 +13,7 @@ type YTResults struct {
 	Caption   string     `json:"caption"`
 	Thumbnail string     `json:"thumbnail"`
 	Duration  int        `json:"duration"`
-	Source    []YTSource `json:"sources"`
+	Source    []YTSource `json:"source"`
 }
 
 func IsYouTubeURL(url string) bool {
