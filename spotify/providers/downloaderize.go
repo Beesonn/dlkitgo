@@ -132,24 +132,45 @@ func (p *Downloaderize) ParseResponse(resp *http.Response) (string, error) {
 		return "", fmt.Errorf("conversion returned status %d. Body: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	var result map[string]interface{}
+	result, err := p.ParseJSONResponse(bodyBytes)
+	if err != nil {
+		return "", err
+	}
 
+	if err := p.CheckSuccess(result); err != nil {
+		return "", err
+	}
+
+	return p.ExtractDownloadURL(result)
+}
+
+func (p *Downloaderize) ParseJSONResponse(bodyBytes []byte) (map[string]interface{}, error) {
+	var result map[string]interface{}
 	decoder := json.NewDecoder(bytes.NewReader(bodyBytes))
 	if err := decoder.Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode JSON response: %w", err)
+		return nil, fmt.Errorf("failed to decode JSON response: %w", err)
+	}
+	return result, nil
+}
+
+func (p *Downloaderize) CheckSuccess(result map[string]interface{}) error {
+	successVal, exists := result["success"]
+	if !exists {
+		return nil
 	}
 
-	if successVal, exists := result["success"]; exists {
-		if successBool, ok := successVal.(bool); ok && !successBool {
-			if dataVal, dataExists := result["data"]; dataExists {
-				if errorMsg, ok := dataVal.(string); ok {
-					return "", fmt.Errorf("API error: %s", errorMsg)
-				}
+	if successBool, ok := successVal.(bool); ok && !successBool {
+		if dataVal, dataExists := result["data"]; dataExists {
+			if errorMsg, ok := dataVal.(string); ok {
+				return fmt.Errorf("API error: %s", errorMsg)
 			}
-			return "", errors.New("API returned unsuccessful response")
 		}
+		return errors.New("API returned unsuccessful response")
 	}
+	return nil
+}
 
+func (p *Downloaderize) ExtractDownloadURL(result map[string]interface{}) (string, error) {
 	dataVal, dataExists := result["data"]
 	if !dataExists {
 		return "", errors.New("data field not found in response")
