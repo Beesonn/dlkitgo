@@ -39,7 +39,7 @@ func (s *SpotifyService) Search(query string, searchType ...string) (*SearchResp
 		sType = searchType[0]
 	}
 
-	api := "https://meow.mangoi.in/search"
+	api := "https://dlkitlib-spot.vercel.app/api/search"
 	queryParams := url.Values{}
 	queryParams.Add("q", query)
 	queryParams.Add("type", sType)
