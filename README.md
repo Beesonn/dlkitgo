@@ -18,8 +18,6 @@
     </a>
 </p>
 
-> **Note:** This project will be actively maintained and new features will be added only when it reaches **50+ stars**
-
 dlkitgo is a Golang library that can download, search, info etc. from popular platforms and third-party. Completely free.
 
 <p align="center">
