@@ -14,6 +14,6 @@ type Provider interface {
 
 func DefaultProviders(client *http.Client) []Provider {
 	return []Provider{
-		&providers.VidFly{Client: client},
+		&providers.VidVaults{Client: client},
 	}
 }
