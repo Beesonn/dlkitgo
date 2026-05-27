@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -60,21 +61,10 @@ func (t *TubeService) GetInfo(url string) (YouTubeData, error) {
 	if err != nil {
 		return YouTubeData{}, err
 	}
-
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Sec-Ch-Ua", `"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`)
-	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
-	req.Header.Set("Sec-Ch-Ua-Platform", `"Windows"`)
-	req.Header.Set("Sec-Fetch-Dest", "document")
-	req.Header.Set("Sec-Fetch-Mode", "navigate")
-	req.Header.Set("Sec-Fetch-Site", "none")
-	req.Header.Set("Upgrade-Insecure-Requests", "1")
-	req.Header.Set("Cookie", "CONSENT=YES+cb.20231219-08-p0.en+FX+123; SOCS=CAISNQgDEitib3FfaWRlbnRpdHlmb250YmFja19jb250cm9sbGVyU2V0dGluZ3MYASImCiJXZWFLQUtPTENqMEVNZUUEd1VOQ0E9PRgBIIICGKMC;")
-    
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
 	resp, err := t.Client.Do(req)
 	if err != nil {
 		return YouTubeData{}, errors.New("failed to fetch YouTube page")
@@ -153,10 +143,65 @@ func extractYtInitialPlayerResponse(html string) map[string]interface{} {
 	return nil
 }
 
+// fetchInnerTubeData directly queries YouTube's internal API to bypass HTML blocks
+func (t *TubeService) fetchInnerTubeData(videoID string) (map[string]interface{}, error) {
+	url := "https://www.youtube.com/youtubei/v1/player"
+
+	// Mimic an Android client to bypass VPS datacenter blocks
+	payload := map[string]interface{}{
+		"context": map[string]interface{}{
+			"client": map[string]interface{}{
+				"clientName":    "ANDROID",
+				"clientVersion": "17.31.35",
+			},
+		},
+		"videoId": videoID,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "com.google.android.youtube/17.31.35 (Linux; U; Android 11)")
+
+	resp, err := t.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("InnerTube API returned status: %d", resp.StatusCode)
+	}
+
+	var responseData map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
+		return nil, err
+	}
+
+	return responseData, nil
+}
+
 func (t *TubeService) parseVideoPage(html string, result *YouTubeData) error {
-	playerResponse := extractYtInitialPlayerResponse(html)
-	if playerResponse == nil {
-		return errors.New("could not extract video data")
+	// Call the API instead of parsing the HTML
+	playerResponse, err := t.fetchInnerTubeData(result.ID)
+	if err != nil || playerResponse == nil {
+		return errors.New("could not fetch video data via InnerTube API")
+	}
+
+	// Check if YouTube still soft-blocked the video (e.g., Age Restricted)
+	if playability, ok := playerResponse["playabilityStatus"].(map[string]interface{}); ok {
+		if status, ok := playability["status"].(string); ok && status != "OK" {
+			reason, _ := playability["reason"].(string)
+			return fmt.Errorf("video unavailable: %s (%s)", status, reason)
+		}
 	}
 
 	videoDetails, ok := playerResponse["videoDetails"].(map[string]interface{})
