@@ -1,21 +1,24 @@
 package youtube
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 type SearchResult struct {
-	ID          string `json:"id"`
-	URL         string `json:"url"`
-	Image       string `json:"image"`
-	Duration    int    `json:"duration"`
-	Channel     string `json:"channel"`
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	ReleaseDate string `json:"release_date"`
+	ID       string `json:"id"`
+	URL      string `json:"url"`
+	Image    string `json:"image"`
+	Duration int    `json:"duration"`
+	Channel  string `json:"channel"`
+	Name     string `json:"name"`
 }
 
 type SearchResponse struct {
@@ -30,7 +33,7 @@ func (t *TubeService) Search(query string, limit ...int) (*SearchResponse, error
 		return nil, errors.New("query cannot be empty")
 	}
 
-	maxResults := 10
+	maxResults := 20
 	if len(limit) > 0 && limit[0] > 0 {
 		maxResults = limit[0]
 		if maxResults > 50 {
@@ -38,52 +41,37 @@ func (t *TubeService) Search(query string, limit ...int) (*SearchResponse, error
 		}
 	}
 
-	innerTube := NewInnerTubeClient(t.Client)
+	searchURL := "https://www.youtube.com/results?search_query=" + url.QueryEscape(query)
 
-	response, err := innerTube.Search(query, "", "")
+	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("search failed: %w", err)
+		return nil, err
 	}
 
-	results := parseInnerTubeSearchResults(response, query, maxResults)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	for i := range results.Results {
-		if results.Results[i].Type == "video" && results.Results[i].ID != "" {
-			results.Results[i].ReleaseDate = t.fetchReleaseDateViaAPI(results.Results[i].ID)
-		}
+	resp, err := t.Client.Do(req)
+	if err != nil {
+		return nil, errors.New("failed to connect to YouTube")
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("YouTube error: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	results := parseYouTubeResponse(string(body), query, maxResults)
 
 	return results, nil
 }
 
-func (t *TubeService) fetchReleaseDateViaAPI(videoID string) string {
-	innerTube := NewInnerTubeClient(t.Client)
-	playerData, err := innerTube.GetPlayer(videoID)
-	if err != nil {
-		return ""
-	}
-
-	if videoDetails, ok := playerData["videoDetails"].(map[string]interface{}); ok {
-		if publishDate, ok := videoDetails["publishDate"].(string); ok {
-			return publishDate
-		}
-	}
-
-	if microformat, ok := playerData["microformat"].(map[string]interface{}); ok {
-		if playerMicroformat, ok := microformat["playerMicroformatRenderer"].(map[string]interface{}); ok {
-			if publishDate, ok := playerMicroformat["publishDate"].(string); ok {
-				return publishDate
-			}
-			if uploadDate, ok := playerMicroformat["uploadDate"].(string); ok {
-				return uploadDate
-			}
-		}
-	}
-
-	return ""
-}
-
-func parseInnerTubeSearchResults(data map[string]interface{}, query string, limit int) *SearchResponse {
+func parseYouTubeResponse(html, query string, limit int) *SearchResponse {
 	response := &SearchResponse{
 		Query:        query,
 		Limit:        limit,
@@ -91,78 +79,57 @@ func parseInnerTubeSearchResults(data map[string]interface{}, query string, limi
 		Results:      []SearchResult{},
 	}
 
-	contents, ok := data["contents"].(map[string]interface{})
-	if !ok {
+	re := regexp.MustCompile(`var ytInitialData = ({.*?});</script>`)
+	matches := re.FindStringSubmatch(html)
+	if len(matches) < 2 {
 		return response
 	}
 
-	sectionList, ok := contents["twoColumnSearchResultsRenderer"].(map[string]interface{})
-	if !ok {
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(matches[1]), &data); err != nil {
 		return response
 	}
 
-	primaryContents, ok := sectionList["primaryContents"].(map[string]interface{})
-	if !ok {
+	contents, _ := data["contents"].(map[string]interface{})
+	twoColumn, _ := contents["twoColumnSearchResultsRenderer"].(map[string]interface{})
+	primary, _ := twoColumn["primaryContents"].(map[string]interface{})
+	sectionList, _ := primary["sectionListRenderer"].(map[string]interface{})
+	contents2, _ := sectionList["contents"].([]interface{})
+	if len(contents2) == 0 {
 		return response
 	}
-
-	sectionListRenderer, ok := primaryContents["sectionListRenderer"].(map[string]interface{})
-	if !ok {
-		return response
-	}
-
-	contentsList, ok := sectionListRenderer["contents"].([]interface{})
-	if len(contentsList) == 0 {
-		return response
-	}
-
-	itemSection, ok := contentsList[0].(map[string]interface{})
-	if !ok {
-		return response
-	}
-
-	itemSectionRenderer, ok := itemSection["itemSectionRenderer"].(map[string]interface{})
-	if !ok {
-		return response
-	}
-
-	items, ok := itemSectionRenderer["contents"].([]interface{})
-	if !ok {
-		return response
-	}
+	itemSection, _ := contents2[0].(map[string]interface{})
+	itemSectionRenderer, _ := itemSection["itemSectionRenderer"].(map[string]interface{})
+	items, _ := itemSectionRenderer["contents"].([]interface{})
 
 	count := 0
 	for _, item := range items {
 		if count >= limit {
 			break
 		}
-
 		itemMap, ok := item.(map[string]interface{})
 		if !ok {
 			continue
 		}
-
-		if videoRenderer, ok := itemMap["videoRenderer"].(map[string]interface{}); ok {
-			result := parseInnerTubeVideo(videoRenderer)
+		videoRenderer, hasVideo := itemMap["videoRenderer"].(map[string]interface{})
+		if hasVideo {
+			result := parseVideoRenderer(videoRenderer)
 			if result.ID != "" {
 				response.Results = append(response.Results, result)
 				count++
 			}
 		}
 	}
-
 	response.TotalResults = len(response.Results)
 	return response
 }
 
-func parseInnerTubeVideo(video map[string]interface{}) SearchResult {
-	result := SearchResult{Type: "video"}
-
-	if videoID, ok := video["videoId"].(string); ok {
-		result.ID = videoID
-		result.URL = "https://www.youtube.com/watch?v=" + videoID
+func parseVideoRenderer(video map[string]interface{}) SearchResult {
+	result := SearchResult{}
+	if videoId, ok := video["videoId"].(string); ok {
+		result.ID = videoId
+		result.URL = "https://www.youtube.com/watch?v=" + videoId
 	}
-
 	if title, ok := video["title"].(map[string]interface{}); ok {
 		if runs, ok := title["runs"].([]interface{}); ok && len(runs) > 0 {
 			if run, ok := runs[0].(map[string]interface{}); ok {
@@ -172,9 +139,8 @@ func parseInnerTubeVideo(video map[string]interface{}) SearchResult {
 			}
 		}
 	}
-
-	if ownerText, ok := video["ownerText"].(map[string]interface{}); ok {
-		if runs, ok := ownerText["runs"].([]interface{}); ok && len(runs) > 0 {
+	if owner, ok := video["ownerText"].(map[string]interface{}); ok {
+		if runs, ok := owner["runs"].([]interface{}); ok && len(runs) > 0 {
 			if run, ok := runs[0].(map[string]interface{}); ok {
 				if text, ok := run["text"].(string); ok {
 					result.Channel = text
@@ -182,38 +148,32 @@ func parseInnerTubeVideo(video map[string]interface{}) SearchResult {
 			}
 		}
 	}
-
-	if thumbnail, ok := video["thumbnail"].(map[string]interface{}); ok {
-		if thumbnails, ok := thumbnail["thumbnails"].([]interface{}); ok && len(thumbnails) > 0 {
-			if thumb, ok := thumbnails[0].(map[string]interface{}); ok {
+	if thumbnails, ok := video["thumbnail"].(map[string]interface{}); ok {
+		if thumbs, ok := thumbnails["thumbnails"].([]interface{}); ok && len(thumbs) > 0 {
+			if thumb, ok := thumbs[0].(map[string]interface{}); ok {
 				if url, ok := thumb["url"].(string); ok {
 					result.Image = url
 				}
 			}
 		}
 	}
-
 	if lengthText, ok := video["lengthText"].(map[string]interface{}); ok {
 		if simpleText, ok := lengthText["simpleText"].(string); ok {
 			result.Duration = durationToSeconds(simpleText)
 		}
 	}
-
 	if result.Duration == 0 {
 		if lengthSeconds, ok := video["lengthSeconds"].(string); ok {
 			sec, _ := strconv.Atoi(lengthSeconds)
 			result.Duration = sec
+		} else if lengthSecondsFloat, ok := video["lengthSeconds"].(float64); ok {
+			result.Duration = int(lengthSecondsFloat)
 		}
 	}
-
 	return result
 }
 
 func durationToSeconds(dur string) int {
-	if dur == "" {
-		return 0
-	}
-
 	parts := strings.Split(dur, ":")
 	if len(parts) == 2 {
 		minutes, _ := strconv.Atoi(parts[0])

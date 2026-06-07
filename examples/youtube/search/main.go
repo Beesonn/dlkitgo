@@ -28,6 +28,4 @@ func main() {
 	fmt.Printf("Channel: %s\n", video.Channel)
 	fmt.Printf("Duration: %d seconds\n", video.Duration)
 	fmt.Printf("Thumbnail: %s\n", video.Image)
-	fmt.Printf("Uploaded: %s\n", video.ReleaseDate)
-	fmt.Printf("Type: %s\n", video.Type)
 }
