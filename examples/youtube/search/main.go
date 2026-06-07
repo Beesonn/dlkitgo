@@ -10,7 +10,7 @@ func main() {
 	client := dlkitgo.NewClient()
 
 	fmt.Println("Searching for YouTube video...")
-	search, err := client.Youtube.Search("sheriya", 1, "all")
+	search, err := client.Youtube.Search("sheriya", 1)
 	if err != nil {
 		fmt.Println("ERROR: Search failed:", err)
 		return
