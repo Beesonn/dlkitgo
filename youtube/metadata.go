@@ -62,6 +62,7 @@ func (t *TubeService) GetInfo(url string) (YouTubeData, error) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+   req.Header.Set("Cookie", "CONSENT=YES+cb.20210328-17-p0.en+FX+478")
 
 	resp, err := t.Client.Do(req)
 	if err != nil {
