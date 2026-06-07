@@ -6,11 +6,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 )
 
 type InnerTubeClient struct {
 	client  *http.Client
 	headers map[string]string
+	cookies map[string]string
+}
+
+var VisitorCookies = map[string]string{
+	"VISITOR_INFO1_LIVE":       "CdBfWKlCOYY",
+	"VISITOR_PRIVACY_METADATA": "CgJQSxIEGgAgZw%3D%3D",
+	"PREF":                     "f4=4000000&f6=40000000&tz=America.New_York&f7=100",
+	"GL":                       "US",
 }
 
 var WebClient = map[string]string{
@@ -30,7 +40,7 @@ const (
 	VideosTabParams    = "EgZ2aWRlb3PyBgQKAjoA"
 	ShortsTabParams    = "EgZzaG9ydHPyBgUKA5oBAA%3D%3D"
 	PlaylistsTabParams = "EglwbGF5bGlzdHPyBgQKAkIA"
-	SearchTabParams    = "EgZzZWFyY2jyBgQKAloA"
+	SearchTabParams    = "EgZzZWFyY2jyBgQKA1oA"
 )
 
 const (
@@ -65,17 +75,78 @@ type InnerTubePlayerPayload struct {
 
 func NewInnerTubeClient(httpClient *http.Client) *InnerTubeClient {
 	if httpClient == nil {
-		httpClient = &http.Client{}
+		jar, _ := cookiejar.New(nil)
+		httpClient = &http.Client{
+			Jar: jar,
+		}
 	}
 
-	return &InnerTubeClient{
+	client := &InnerTubeClient{
 		client: httpClient,
 		headers: map[string]string{
 			"Accept-Language": "en-US,en;q=0.9",
 			"Content-Type":    "application/json",
 			"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
 		},
+		cookies: make(map[string]string),
 	}
+
+	client.SetCookies(VisitorCookies)
+
+	return client
+}
+
+func NewInnerTubeClientWithCookies(httpClient *http.Client, cookies map[string]string) *InnerTubeClient {
+	client := NewInnerTubeClient(httpClient)
+	client.SetCookies(cookies)
+	return client
+}
+
+func (it *InnerTubeClient) SetCookies(cookies map[string]string) {
+	if len(cookies) == 0 {
+		return
+	}
+
+	for k, v := range cookies {
+		it.cookies[k] = v
+	}
+
+	if it.client.Jar != nil {
+		parsedUrl, _ := url.Parse("https://youtube.com")
+		var httpCookies []*http.Cookie
+		for name, value := range cookies {
+			httpCookies = append(httpCookies, &http.Cookie{
+				Name:  name,
+				Value: value,
+				Path:  "/",
+			})
+		}
+		it.client.Jar.SetCookies(parsedUrl, httpCookies)
+
+		wwwUrl, _ := url.Parse("https://www.youtube.com")
+		it.client.Jar.SetCookies(wwwUrl, httpCookies)
+	}
+}
+
+func (it *InnerTubeClient) AddCookie(name, value string) {
+	it.cookies[name] = value
+
+	if it.client.Jar != nil {
+		parsedUrl, _ := url.Parse("https://youtube.com")
+		it.client.Jar.SetCookies(parsedUrl, []*http.Cookie{{
+			Name:  name,
+			Value: value,
+			Path:  "/",
+		}})
+	}
+}
+
+func (it *InnerTubeClient) GetCookies() map[string]string {
+	return it.cookies
+}
+
+func (it *InnerTubeClient) SetHeader(key, value string) {
+	it.headers[key] = value
 }
 
 func (it *InnerTubeClient) doRequest(url string, payload interface{}) (map[string]interface{}, error) {
@@ -98,6 +169,12 @@ func (it *InnerTubeClient) doRequest(url string, payload interface{}) (map[strin
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if it.client.Jar != nil {
+		for _, cookie := range resp.Cookies() {
+			it.cookies[cookie.Name] = cookie.Value
+		}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
