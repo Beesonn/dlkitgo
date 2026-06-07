@@ -225,7 +225,7 @@ func (it *InnerTubeClient) Browse(browseID string, params string, continuation s
 		}
 	}
 
-	return it.doRequest(InnerTubeBrowseURL, payload)
+	return it.doRequest("https://proxy-xi-dun.vercel.app/proxy?url=" + InnerTubeBrowseURL, payload)
 }
 
 func (it *InnerTubeClient) GetPlayer(videoID string) (map[string]interface{}, error) {
