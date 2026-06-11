@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
+	"net/url"
 )
 
 type VidVaults struct {
@@ -84,138 +84,65 @@ func (p *VidVaults) DoRequest(url string) (map[string]interface{}, error) {
 }
 
 func (p *VidVaults) ParseResponse(data map[string]interface{}, originalURL string) (YTResults, error) {
-	results := p.ExtractBasicInfo(data)
-	p.ExtractDownloadOptions(data, &results, originalURL)
+	results := YTResults{
+		Source: []YTSource{},
+	}
+
+	if title, ok := data["title"].(string); ok {
+		results.Caption = title
+	}
+
+	if thumbnail, ok := data["thumbnail"].(string); ok {
+		results.Thumbnail = thumbnail
+	}
+
+	if duration, ok := data["duration"].(float64); ok {
+		results.Duration = int(duration)
+	}
+
+	encodedURL := url.QueryEscape(originalURL)
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=low&format=mp4&audioOnly=false", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "video",
+		Quality:  "480p",
+	})
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=medium&format=mp4&audioOnly=false", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "video",
+		Quality:  "720p",
+	})
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=high&format=mp4&audioOnly=false", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "video",
+		Quality:  "1080p",
+	})
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=highest&format=mp4&audioOnly=false", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "video",
+		Quality:  "4K",
+	})
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=high&format=mp3&audioOnly=true", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "audio",
+		Quality:  "320kbps",
+	})
+
+	results.Source = append(results.Source, YTSource{
+		URL:      fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=medium&format=mp3&audioOnly=true", p.BaseURL(), encodedURL),
+		Duration: results.Duration,
+		Type:     "audio",
+		Quality:  "192kbps",
+	})
 
 	return results, nil
-}
-
-func (p *VidVaults) ExtractBasicInfo(data map[string]interface{}) YTResults {
-	title, _ := data["title"].(string)
-	thumbnail, _ := data["thumbnail"].(string)
-
-	var duration int
-	if dur, ok := data["duration"].(float64); ok {
-		duration = int(dur)
-	}
-
-	return YTResults{
-		Caption:   title,
-		Thumbnail: thumbnail,
-		Duration:  duration,
-		Source:    []YTSource{},
-	}
-}
-
-func (p *VidVaults) ExtractDownloadOptions(data map[string]interface{}, results *YTResults, originalURL string) {
-	downloadOptions, ok := data["downloadOptions"].(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	if videoOpts, ok := downloadOptions["video"].([]interface{}); ok {
-		for _, opt := range videoOpts {
-			optMap, ok := opt.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			source := p.CreateVideoSource(optMap, originalURL, results.Duration)
-			if source.URL != "" {
-				results.Source = append(results.Source, source)
-			}
-		}
-	}
-
-	if audioOpts, ok := downloadOptions["audio"].([]interface{}); ok {
-		for _, opt := range audioOpts {
-			optMap, ok := opt.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			source := p.CreateAudioSource(optMap, originalURL, results.Duration)
-			if source.URL != "" {
-				results.Source = append(results.Source, source)
-			}
-		}
-	}
-}
-
-func (p *VidVaults) CreateVideoSource(opt map[string]interface{}, originalURL string, duration int) YTSource {
-	quality, _ := opt["quality"].(string)
-	format, _ := opt["format"].(string)
-	label, _ := opt["label"].(string)
-
-	if quality == "" || format == "" {
-		return YTSource{}
-	}
-
-	streamURL := fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=%s&format=%s&audioOnly=false",
-		p.BaseURL(), originalURL, quality, format)
-
-	return YTSource{
-		URL:      streamURL,
-		Duration: duration,
-		Type:     "video",
-		Quality:  p.FormatVideoQuality(quality, label),
-	}
-}
-
-func (p *VidVaults) CreateAudioSource(opt map[string]interface{}, originalURL string, duration int) YTSource {
-	quality, _ := opt["quality"].(string)
-	format, _ := opt["format"].(string)
-	label, _ := opt["label"].(string)
-
-	if quality == "" || format == "" {
-		return YTSource{}
-	}
-
-	streamURL := fmt.Sprintf("%s/api/v1/download/stream?url=%s&quality=%s&format=%s&audioOnly=true",
-		p.BaseURL(), originalURL, quality, format)
-
-	return YTSource{
-		URL:      streamURL,
-		Duration: duration,
-		Type:     "audio",
-		Quality:  p.FormatAudioQuality(quality, label),
-	}
-}
-
-func (p *VidVaults) FormatVideoQuality(quality, label string) string {
-	if quality != "" {
-		return quality
-	}
-	if label != "" {
-		return label
-	}
-	return "N/A"
-}
-
-func (p *VidVaults) FormatAudioQuality(quality, label string) string {
-	if label != "" {
-		parts := strings.Split(label, "(")
-		if len(parts) > 1 {
-			bitrate := strings.TrimSuffix(parts[1], ")")
-			return bitrate
-		}
-		if strings.Contains(label, "kbps") {
-			words := strings.Split(label, " ")
-			for _, word := range words {
-				if strings.Contains(word, "kbps") {
-					return word
-				}
-			}
-		}
-	}
-	if quality == "high" {
-		return "320kbps"
-	}
-	if quality == "medium" {
-		return "192kbps"
-	}
-	if quality != "" {
-		return quality
-	}
-	return "audio"
 }
