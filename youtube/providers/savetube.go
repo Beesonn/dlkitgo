@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 )
 
 type SaveTube struct {
@@ -40,6 +41,11 @@ type saveTubeDownloadResponse struct {
 	} `json:"data"`
 }
 
+type qualityPair struct {
+	quality string
+	label   string
+}
+
 func (p *SaveTube) Name() string {
 	return "savetube"
 }
@@ -62,7 +68,7 @@ func (p *SaveTube) Stream(url string) (YTResults, error) {
 		return YTResults{}, err
 	}
 
-	return p.buildResults(info, url), nil
+	return p.buildResultsFast(info, url), nil
 }
 
 func (p *SaveTube) getVideoInfo(url string) (*saveTubeInfo, error) {
@@ -155,7 +161,7 @@ func (p *SaveTube) decryptAESCBC(encryptedData string) ([]byte, error) {
 	return ciphertext[:len(ciphertext)-paddingLen], nil
 }
 
-func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResults {
+func (p *SaveTube) buildResultsFast(info *saveTubeInfo, originalURL string) YTResults {
 	results := YTResults{
 		Caption:   info.Title,
 		Thumbnail: info.Thumbnail,
@@ -163,10 +169,7 @@ func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResult
 		Source:    []YTSource{},
 	}
 
-	videoQualities := []struct {
-		quality string
-		label   string
-	}{
+	videoQualities := []qualityPair{
 		{"144", "144p"},
 		{"360", "360p"},
 		{"480", "480p"},
@@ -174,10 +177,7 @@ func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResult
 		{"1080", "1080p"},
 	}
 
-	audioQualities := []struct {
-		quality string
-		label   string
-	}{
+	audioQualities := []qualityPair{
 		{"144", "144kbps"},
 		{"360", "360kbps"},
 		{"480", "480kbps"},
@@ -185,119 +185,105 @@ func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResult
 		{"1080", "1080kbps"},
 	}
 
+	cdn, err := p.getFastestCDN()
+	if err != nil {
+		cdn = "media.savetube.vip"
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	sources := make([]YTSource, 0, 10)
+
 	for _, vq := range videoQualities {
-		results.Source = append(results.Source, YTSource{
-			URL:      p.buildDownloadURL(originalURL, info.Key, "video", vq.quality),
-			Duration: info.Duration,
-			Type:     "video",
-			Quality:  vq.label,
-		})
+		wg.Add(1)
+		go func(qual qualityPair) {
+			defer wg.Done()
+			downloadURL := p.getDownloadURLFast(cdn, info.Key, "video", qual.quality)
+			if downloadURL != "" {
+				mu.Lock()
+				sources = append(sources, YTSource{
+					URL:      downloadURL,
+					Duration: info.Duration,
+					Type:     "video",
+					Quality:  qual.label,
+				})
+				mu.Unlock()
+			}
+		}(vq)
 	}
 
 	for _, aq := range audioQualities {
-		results.Source = append(results.Source, YTSource{
-			URL:      p.buildDownloadURL(originalURL, info.Key, "audio", aq.quality),
-			Duration: info.Duration,
-			Type:     "audio",
-			Quality:  aq.label,
-		})
+		wg.Add(1)
+		go func(qual qualityPair) {
+			defer wg.Done()
+			downloadURL := p.getDownloadURLFast(cdn, info.Key, "audio", qual.quality)
+			if downloadURL != "" {
+				mu.Lock()
+				sources = append(sources, YTSource{
+					URL:      downloadURL,
+					Duration: info.Duration,
+					Type:     "audio",
+					Quality:  qual.label,
+				})
+				mu.Unlock()
+			}
+		}(aq)
 	}
 
+	wg.Wait()
+	results.Source = sources
 	return results
 }
 
-func (p *SaveTube) buildDownloadURL(originalURL, key, downloadType, quality string) string {
-	cdnResp, err := p.Client.Get("https://media.savetube.vip/api/random-cdn")
-	if err != nil {
-		return fmt.Sprintf("https://media.savetube.vip/api/download?url=%s&key=%s&type=%s&quality=%s",
-			originalURL, key, downloadType, quality)
-	}
-	defer cdnResp.Body.Close()
-
-	var cdnData saveTubeCDNResponse
-	if err := json.NewDecoder(cdnResp.Body).Decode(&cdnData); err != nil {
-		return fmt.Sprintf("https://media.savetube.vip/api/download?url=%s&key=%s&type=%s&quality=%s",
-			originalURL, key, downloadType, quality)
-	}
-
-	reqBody, err := json.Marshal(map[string]interface{}{
-		"downloadType": downloadType,
-		"quality":      quality,
-		"key":          key,
-	})
-	if err != nil {
-		return fmt.Sprintf("https://%s/download?url=%s&key=%s&type=%s&quality=%s",
-			cdnData.CDN, originalURL, key, downloadType, quality)
-	}
-
-	apiURL := fmt.Sprintf("https://%s/download", cdnData.CDN)
-	resp, err := p.Client.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return fmt.Sprintf("https://%s/download?url=%s&key=%s&type=%s&quality=%s",
-			cdnData.CDN, originalURL, key, downloadType, quality)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Sprintf("https://%s/download?url=%s&key=%s&type=%s&quality=%s",
-			cdnData.CDN, originalURL, key, downloadType, quality)
-	}
-
-	var downloadResp saveTubeDownloadResponse
-	if err := json.Unmarshal(body, &downloadResp); err != nil {
-		return fmt.Sprintf("https://%s/download?url=%s&key=%s&type=%s&quality=%s",
-			cdnData.CDN, originalURL, key, downloadType, quality)
-	}
-
-	return downloadResp.Data.DownloadURL
-}
-
-func (p *SaveTube) GetDownloadURL(url, key, downloadType, quality string) (string, error) {
+func (p *SaveTube) getFastestCDN() (string, error) {
 	if p.Client == nil {
 		p.Client = &http.Client{}
 	}
 
-	cdnResp, err := p.Client.Get("https://media.savetube.vip/api/random-cdn")
+	resp, err := p.Client.Get("https://media.savetube.vip/api/random-cdn")
 	if err != nil {
-		return "", fmt.Errorf("failed to get CDN: %v", err)
+		return "", err
 	}
-	defer cdnResp.Body.Close()
+	defer resp.Body.Close()
 
 	var cdnData saveTubeCDNResponse
-	if err := json.NewDecoder(cdnResp.Body).Decode(&cdnData); err != nil {
-		return "", fmt.Errorf("failed to decode CDN response: %v", err)
+	if err := json.NewDecoder(resp.Body).Decode(&cdnData); err != nil {
+		return "", err
 	}
 
+	return cdnData.CDN, nil
+}
+
+func (p *SaveTube) getDownloadURLFast(cdn, key, downloadType, quality string) string {
 	reqBody, err := json.Marshal(map[string]interface{}{
 		"downloadType": downloadType,
 		"quality":      quality,
 		"key":          key,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %v", err)
+		return ""
 	}
 
-	apiURL := fmt.Sprintf("https://%s/download", cdnData.CDN)
+	apiURL := fmt.Sprintf("https://%s/download", cdn)
 	resp, err := p.Client.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		return "", fmt.Errorf("failed to get download URL: %v", err)
+		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download API returned status: %d", resp.StatusCode)
+		return ""
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read download response: %v", err)
+		return ""
 	}
 
 	var downloadResp saveTubeDownloadResponse
 	if err := json.Unmarshal(body, &downloadResp); err != nil {
-		return "", fmt.Errorf("failed to decode download response: %v", err)
+		return ""
 	}
 
-	return downloadResp.Data.DownloadURL, nil
+	return downloadResp.Data.DownloadURL
 }
