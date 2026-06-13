@@ -167,7 +167,6 @@ func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResult
 		quality string
 		label   string
 	}{
-		{"144", "144p"},
 		{"360", "360p"},
 		{"480", "480p"},
 		{"720", "720p"},
@@ -178,11 +177,10 @@ func (p *SaveTube) buildResults(info *saveTubeInfo, originalURL string) YTResult
 		quality string
 		label   string
 	}{
-		{"144", "144kbps"},
-		{"360", "360kbps"},
-		{"480", "480kbps"},
-		{"720", "720kbps"},
-		{"1080", "1080kbps"},
+		{"92", "92kbps"},
+		{"128", "120kbps"},
+		{"256", "256kbps"},
+		{"320", "320kbps"},
 	}
 
 	for _, vq := range videoQualities {
