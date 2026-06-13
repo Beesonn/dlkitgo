@@ -16,6 +16,6 @@ type Provider interface {
 func DefaultProviders(client *http.Client) []Provider {
 	return []Provider{
 		&providers.SpotMate{Client: client},
-        &providers.Downloaderize{Client: client},
+		&providers.Downloaderize{Client: client},
 	}
 }
