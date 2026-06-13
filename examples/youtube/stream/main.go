@@ -8,7 +8,7 @@ import (
 
 func main() {
 	client := dlkitgo.NewClient()
-	url := "https://youtu.be/q8H1ikm5DvY"
+	url := "https://youtu.be/WTJSt4wP2ME?si=rFMdirx0T4ZhCRX1"
 	stream, err := client.Youtube.Stream(url)
 	if err != nil {
 		fmt.Printf("ERROR: Stream failed: %v", err)
