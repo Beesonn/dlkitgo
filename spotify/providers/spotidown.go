@@ -51,7 +51,7 @@ func (p *Spotidown) Stream(spotifyURL string) (string, error) {
 		return "", err
 	}
 
-	return rawURL, nil
+	return ProxyURL(rawURL), nil
 }
 
 func (p *Spotidown) GetInitialTokens() (string, string, error) {
