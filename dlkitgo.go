@@ -1,6 +1,7 @@
 package dlkitgo
 
 import (
+	"net"
 	"net/http"
 	"time"
 
@@ -19,8 +20,19 @@ type Dlkit struct {
 }
 
 func NewClient() *Dlkit {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 20,
+		MaxConnsPerHost:     30,
+		IdleConnTimeout:     90 * time.Second,
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+	}
+
 	c := &Dlkit{
-		Client: &http.Client{Timeout: 15 * time.Second},
+		Client: &http.Client{Timeout: 15 * time.Second, Transport: transport},
 	}
 
 	c.Spotify = spotify.NewSpotify(c.Client)
