@@ -10,6 +10,7 @@ Currently, the collection includes examples for the following platforms:
 *   **Instagram:** [examples](/examples/instagram)
 *   **Youtube:** [examples](/examples/youtube) 
 *   **Pinterest:** [examples](/examples/pinterest)
+*   **Anime:** [examples](/examples/anime)
 
 To use an example, go into the specific platform's folder and follow the instructions in its `README.md` file.
 
