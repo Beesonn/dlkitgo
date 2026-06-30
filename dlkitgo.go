@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Beesonn/dlkitgo/anime"
 	"github.com/Beesonn/dlkitgo/instagram"
 	"github.com/Beesonn/dlkitgo/pinterest"
 	"github.com/Beesonn/dlkitgo/spotify"
@@ -17,6 +18,7 @@ type Dlkit struct {
 	Instagram *instagram.InstaService
 	Youtube   *youtube.TubeService
 	Pinterest *pinterest.PinService
+	Anime     *anime.AnimeService
 }
 
 func NewClient() *Dlkit {
@@ -32,13 +34,14 @@ func NewClient() *Dlkit {
 	}
 
 	c := &Dlkit{
-		Client: &http.Client{Timeout: 15 * time.Second, Transport: transport},
+		Client: &http.Client{Timeout: 15555 * time.Second, Transport: transport},
 	}
 
 	c.Spotify = spotify.NewSpotify(c.Client)
 	c.Instagram = instagram.NewInsta(c.Client)
 	c.Youtube = youtube.NewTube(c.Client)
 	c.Pinterest = pinterest.NewPin(c.Client)
+	c.Anime = anime.NewAnime(c.Client)
 
 	return c
 }
