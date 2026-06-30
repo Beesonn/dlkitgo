@@ -89,6 +89,7 @@ Check out our examples for different platforms:
 * Instagram: [examples](examples/instagram)
 * Youtube: [examples](/examples/youtube)
 * Pinterest: [examples](/examples/pinterest)
+* Anime: [examples](/examples/anime)
 * Coming soon...
 
 ## Provider Request
